@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<hemelbsettings version="3">
+<!-- Mesh Number = 0 -->
+  <simulation>
+    <step_length units="s" value= "0.000025"/>
+    <steps units="lattice" value="10000"/>
+    <stresstype value="1"/>
+    <voxel_size units="m" value="0.0001"/>
+    <origin units="m" value="(0.0,0.0,0.0)"/>
+  </simulation>
+ <geometry>
+    <datafile path="pipe.gmy"/>
+    <mapping path="scalingMap0to1.txt" value="0"/>
+  </geometry>
+  <initialconditions>
+    <pressure>
+      <uniform units="mmHg" value="0.0"/>
+    </pressure>
+  </initialconditions>
+<!--
+  <monitoring>
+    <incompressibility/>
+  </monitoring>
+ -->
+  <inlets>
+    <inlet>
+      <!-- index value=0-->
+      <condition type="velocity" subtype="file">
+        <path value="SmoothVel_MESH0_INLET0_VELOCITY_hRate60_MaxV0.13.txt"/>
+        <radius value="0.999917" units="m"/>
+        <area value="3.12093" units="m^2"/>
+      </condition>
+      <normal units="dimensionless" value="(2.27251e-11,-2.46071e-10,-1)"/>
+      <position units="lattice" value="(12.9992,12.9992,102.999)"/>
+    </inlet>
+  </inlets>
+  <outlets>
+    <outlet>
+      <!-- index value=0 -->
+      <condition subtype="cosine" type="pressure">
+        <amplitude units="mmHg" value="0.0"/>
+        <mean units="mmHg" value="0.0"/>
+        <phase units="rad" value="0.0"/>
+        <period units="s" value="1"/>
+      </condition>
+      <normal units="dimensionless" value="(-2.32392e-11,-3.10769e-11,1)"/>
+      <position units="lattice" value="(12.9992,12.9992,3)"/>
+    </outlet>
+  </outlets>
+
+  <properties>
+    <propertyoutput file="inlet.dat" period="100">
+      <geometry type="inlet" />
+      <field type="velocity" />
+      <field type="pressure" />
+    </propertyoutput>
+    <propertyoutput file="outlet.dat" period="100">
+      <geometry type="outlet" />
+      <field type="velocity" />
+      <field type="pressure" />
+    </propertyoutput>
+    <propertyoutput file="whole.dat" period="1000">
+      <geometry type="whole" />
+      <field type="velocity" />
+      <field type="pressure" />
+    </propertyoutput>
+  </properties>
+</hemelbsettings>
