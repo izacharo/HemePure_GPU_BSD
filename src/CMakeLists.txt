@@ -15,7 +15,7 @@ option(HEMELB_STATIC_ASSERT "use simple compile-time assertions" ON)
 option(HEMELB_TRACER_PARTICLES "use particles as tracers" ON)
 option(HEMELB_USE_ALL_WARNINGS_GNU "show all compiler warnings on development builds (gnu-style-compilers)" OFF)
 option(HEMELB_USE_SSE3 "use SSE3 intrinsics" OFF)
-option(HEMELB_USE_VELOCITY_WEIGHTS_FILE "use velocity weights file" ON)
+option(HEMELB_USE_VELOCITY_WEIGHTS_FILE "use velocity weights file" OFF)
 option(HEMELB_USE_GMYPLUS "use GMY+ format" OFF)
 option(HEMELB_USE_MPI_CALL "use standard MPI functions when reading blocks" OFF)
 option(HEMELB_USE_MPI_WIN "" OFF)
@@ -49,13 +49,13 @@ set(HEMELB_KERNEL "LBGK"
 	CACHE STRING "kernel: 'LBGK','EntropicAnsumali','EntropicChik','MRT','TRT','NNCY','NNCYMOUSE','NNC','NNTPL'")
 set(HEMELB_WALL_BOUNDARY "SIMPLEBOUNCEBACK"
 	CACHE STRING "boundary conditions to be used at the walls: 'BFL','GZS','SIMPLEBOUNCEBACK','JUNKYANG'")
-set(HEMELB_INLET_BOUNDARY "LADDIOLET"
+set(HEMELB_INLET_BOUNDARY "NASHZEROTHORDERPRESSUREIOLET"
 	CACHE STRING "boundary conditions to be used at the inlet: 'NASHZEROTHORDERPRESSUREIOLET','LADDIOLET'")
 set(HEMELB_OUTLET_BOUNDARY "NASHZEROTHORDERPRESSUREIOLET"
 	CACHE STRING "boundary conditions to be used at the outlets: 'NASHZEROTHORDERPRESSUREIOLET','LADDIOLET'")
 set(HEMELB_COMPUTE_ARCHITECTURE "NEUTRAL"
 	CACHE STRING "architecture of the machine being used 'INTELSANDYBRIDGE','AMDBULLDOZER','NEUTRAL','ISBFILEVELOCITYINLET'")
-set(HEMELB_WALL_INLET_BOUNDARY "LADDIOLETSBB"
+set(HEMELB_WALL_INLET_BOUNDARY "NASHZEROTHORDERPRESSURESBB"
 	CACHE STRING "boundary conditions to be used at corners between walls and inlets: 'NASHZEROTHORDERPRESSURESBB','NASHZEROTHORDERPRESSUREBFL','LADDIOLETSBB','LADDIOLETBFL'")
 set(HEMELB_WALL_OUTLET_BOUNDARY "NASHZEROTHORDERPRESSURESBB"
 	CACHE STRING "boundary conditions to be used at corners between walls and outlets: 'NASHZEROTHORDERPRESSURESBB','NASHZEROTHORDERPRESSUREBFL','LADDIOLETSBB','LADDIOLETBFL'")
