@@ -1,5 +1,5 @@
 # HemePure_GPU
-**GPU version of HemePure**.  <br />
+**GPU CUDA version of HemePure**.  <br />
 Build dependencies before attempting to build `hemepure_gpu`.
 
 ## DEPENDENCIES #
