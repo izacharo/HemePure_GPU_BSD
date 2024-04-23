@@ -250,8 +250,18 @@ HemeLB-GPU version 2.2.d
 //------------------------------------------------------------------------------
 Dec 2023
 HemeLB-GPU version 2.3
-   Implementing the checkpointing functionality 
-	i.e. add the option for restarting the simulations 
+   Implementing the checkpointing functionality
+	i.e. add the option for restarting the simulations
+
+	Fixed a bug for:
+	a. reading the restart time from the input file.
+	b. passing that restart time to the simulation so that the correct time-dependent value (e.g. max velocity) is applied to iolets
+
+	There are now 2 options when restarting the simulation:
+	1. If the restart time is not specified, the simulation will read from the XTR checkpointing file
+			the last time the distribution functions were saved.
+	2. The user can specify the restart time
+		2.1. Then a search will be performed in the XTR checkpointing file (if the specific time or the next available greater timestep is available)
 //------------------------------------------------------------------------------
 
 
@@ -857,7 +867,7 @@ __global__ void GPU_WallMom_correction_File_Weights_NoSearch(int64_t *GMem_Coord
 																	int n_arr_elementsInCurrentInlet_weightsTable,
 																	site_t start_Fluid_ID_givenColStreamType, site_t site_Count_givenColStreamType,
 																	site_t lower_limit, site_t upper_limit,
-																	unsigned long time_Step, unsigned long total_TimeSteps)
+																	unsigned long time_Step, unsigned long total_TimeSteps, unsigned long start_time)
 {
 	unsigned long long Ind = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -972,7 +982,7 @@ __global__ void GPU_WallMom_correction_File_Weights_NoSearch(int64_t *GMem_Coord
 						vel_weight = vel_weight_2;
 						//------------------------------------------------------------------
 
-						max_vel = GMem_Inlet_velocityTable[inlet_ID *(total_TimeSteps+1) + time_Step]; // index_inlet*(total_TimeSteps+1)+timeStep
+						max_vel = GMem_Inlet_velocityTable[inlet_ID *(total_TimeSteps+1) + time_Step - start_time]; // index_inlet*(total_TimeSteps+1)+timeStep
 
 						wallMom_x = inletNormal_x * vel_weight * max_vel;
 						wallMom_y = inletNormal_y * vel_weight * max_vel;
@@ -1404,7 +1414,7 @@ __global__ void GPU_WallMom_correction_File_prefactor_NoIoletIDSearch(
 											distribn_t* GMem_Inlet_velocityTable,
 											site_t start_Fluid_ID_givenColStreamType, site_t site_Count_givenColStreamType,
 											site_t lower_limit, site_t upper_limit,
-											unsigned long time_Step, unsigned long total_TimeSteps)
+											unsigned long time_Step, unsigned long total_TimeSteps, unsigned long start_time)
 {
 	unsigned long long Ind = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1456,7 +1466,7 @@ __global__ void GPU_WallMom_correction_File_prefactor_NoIoletIDSearch(
 
 					// Just multiply with max Velocity(IdInlet,t) from velocityTable
 					// 	Load max Vel
-					distribn_t max_vel = GMem_Inlet_velocityTable[IdInlet *(total_TimeSteps+1) + time_Step]; // index_inlet*(total_TimeSteps+1)+timeStep
+					distribn_t max_vel = GMem_Inlet_velocityTable[IdInlet *(total_TimeSteps+1) + time_Step - start_time]; // index_inlet*(total_TimeSteps+1)+timeStep
 
 					// B. Step: Evaluate the single correction term as
 					distribn_t correction = prefactor_correction * max_vel;

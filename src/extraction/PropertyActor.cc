@@ -102,7 +102,10 @@ namespace hemelb
     {
       timers[reporting::Timers::extractionWriting].Start();
 
-      propertyWriter->Write(simulationState.GetTimeStep(), simulationState.GetTotalTimeSteps() );
+      // Case t_start=1
+      //propertyWriter->Write(simulationState.GetTimeStep(), simulationState.GetTotalTimeSteps() );
+      // Case t_start=t_restart (Checkpointing)
+      propertyWriter->Write(simulationState.GetTimeStep(), simulationState.GetInitTimeStep() , simulationState.GetTotalTimeSteps() );
 
       timers[reporting::Timers::extractionWriting].Stop();
     }

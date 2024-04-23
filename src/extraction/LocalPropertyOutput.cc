@@ -218,10 +218,10 @@ namespace hemelb
       return outputSpec;
     }
 
-    void LocalPropertyOutput::Write(unsigned long timestepNumber, unsigned long max_timestepNumber)
+    void LocalPropertyOutput::Write(unsigned long timestepNumber, unsigned long initial_timestepNumber, unsigned long max_timestepNumber)
     {
       // Don't write if we shouldn't this iteration.
-      if (!ShouldWrite(timestepNumber))
+      if (!ShouldWrite(timestepNumber-initial_timestepNumber+1))
       {
         return;
       }
@@ -362,10 +362,14 @@ namespace hemelb
 
       // Determine first the # of the current write
       // Max number of writing times (divide max simulation time with the frequency time):
-      int max_write_n = max_timestepNumber / outputSpec->frequency; //printf("Max_number of writing times = %d \n\n", max_write_n );
+      int max_write_n = (max_timestepNumber) / outputSpec->frequency;
+      // IZ - debugging
+      //printf("max_timestepNumber = %ld, outputSpec->frequency = %ld, initial_timestepNumber = %ld, Max_number of writing times = %d \n\n", max_timestepNumber, outputSpec->frequency, initial_timestepNumber, max_write_n );
 
       requests_Write.resize(max_write_n, MPI_Request());
-      int n_asynch_write = timestepNumber / outputSpec->frequency; // Determine the number of the file (time-sequence) being written
+      // IZ - Consider the checkpointing case (restarting simulation from t_restart = initial_timestepNumber)
+      // int n_asynch_write = timestepNumber / outputSpec->frequency; // Determine the number of the file (time-sequence) being written
+      int n_asynch_write = (timestepNumber - initial_timestepNumber +1) / outputSpec->frequency; // Determine the number of the file (time-sequence) being written
       //printf("Rank: %d, Writing time = %lu and Number = %d \n",  comms.Rank(), timestepNumber, n_asynch_write);
 
       // a. Call MPI_Wait

@@ -989,6 +989,11 @@ namespace hemelb
 			//
 			// April 2023
 			// 	c. Transfer the wall Shear Stress magnitude from the GPU
+
+			// TODO: Modify the following so that it is invoked only when necessary
+			//				i.e. if (propertyCache.densityCache.RequiresRefresh())
+			//					or if (propertyCache.velocityCache.RequiresRefresh())
+			//					or if (propertyCache.wallShearStressMagnitudeCache.RequiresRefresh())
 			//=================================================================================================
 		template<class LatticeType>
 			//bool LBM<LatticeType>::Read_Macrovariables_GPU_to_CPU(int64_t firstIndex, int64_t siteCount, lb::MacroscopicPropertyCache& propertyCache, kernels::HydroVars<LB_KERNEL>& hydroVars(geometry::Site<geometry::LatticeData>&_site)) // Is it necessary to use lb::MacroscopicPropertyCache& propertyCache or just propertyCache, as it is being initialised with the LBM constructor???
@@ -1256,8 +1261,11 @@ namespace hemelb
 				//
 
 				// Read only the density, velocity and fNew[] that needs to be passed to the CPU at the updated sites: The ones that had been updated in the GPU collision kernel
-			  for (site_t siteIndex = firstIndex; siteIndex < (firstIndex + siteCount); siteIndex++)
-			  {
+				// Only if required (if propertyCache.densityCache.RequiresRefresh() is true)
+				if (propertyCache.densityCache.RequiresRefresh() || propertyCache.velocityCache.RequiresRefresh() )
+				{
+				  for (site_t siteIndex = firstIndex; siteIndex < (firstIndex + siteCount); siteIndex++)
+				  {
 			    geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
 			    // printf("site.GetIndex() = %lld Vs siteIndex = %lld \n\n", site.GetIndex(), siteIndex); // Works fine - Access to the correct site
 
@@ -1295,6 +1303,8 @@ namespace hemelb
 					//
 
 				}
+				}
+
 
 				//----------------------------------------------------------------------
 				// Wall Shear Stress Magnitude Case - Fill the adjacent to walls sites
@@ -1983,7 +1993,7 @@ namespace hemelb
 																													arr_elementsInEachInlet[iolet_ID],
 																													start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																													lower_Fluid_index, max_Fluid_index,
-																													mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																													mState->GetTimeStep(), mState->GetTotalTimeSteps(),mState->GetInitTimeStep()
 																													);
 					}
 				} // Closes the if(n_LocalInlets != 0)
@@ -2051,7 +2061,7 @@ namespace hemelb
 																													arr_elementsInEachInlet[iolet_ID],
 																													start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																													lower_Fluid_index, max_Fluid_index,
-																													mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																													mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																													);
 					}
 				} // Closes the if(n_LocalInlets != 0)
@@ -2124,7 +2134,7 @@ namespace hemelb
 																													arr_elementsInEachInlet[iolet_ID],
 																													start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																													lower_Fluid_index, max_Fluid_index,
-																													mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																													mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																													);
 					}
 				} // Closes the if(n_LocalInlets != 0){
@@ -2187,7 +2197,7 @@ namespace hemelb
 																													arr_elementsInEachInlet[iolet_ID],
 																													start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																													lower_Fluid_index, max_Fluid_index,
-																													mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																													mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																													);
 					}
 				} // Closes the if(n_LocalInlets != 0){
@@ -2572,7 +2582,7 @@ namespace hemelb
 																														(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																														start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																														lower_Fluid_index, (max_Fluid_index+1),
-																														mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																														mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																														);
 											}
 										} // Closes the if(n_LocalInlets != 0)
@@ -2622,7 +2632,7 @@ namespace hemelb
 																														(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																														start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																														lower_Fluid_index, (max_Fluid_index+1),
-																														mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																														mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																														);
 											}
 										} // Closes the if(n_LocalInlets != 0)
@@ -2719,7 +2729,7 @@ namespace hemelb
 																														(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																														start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																														lower_Fluid_index, (max_Fluid_index+1),
-																														mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																														mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																														);
 											}
 										} // Closes the if(n_LocalInlets != 0)
@@ -2769,7 +2779,7 @@ namespace hemelb
 																														(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																														start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																														lower_Fluid_index, (max_Fluid_index+1),
-																														mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																														mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																														);
 											}
 										} // Closes the if(n_LocalInlets != 0)
@@ -2874,7 +2884,7 @@ namespace hemelb
 																								(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																								start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																								lower_Fluid_index, (max_Fluid_index+1),
-																								mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																								mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																								);
 					}
 				} // Closes the if(n_LocalInlets != 0)
@@ -2924,7 +2934,7 @@ namespace hemelb
 																								(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																								start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																								lower_Fluid_index, (max_Fluid_index+1),
-																								mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																								mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																								);
 					}
 				} // Closes the if(n_LocalInlets != 0)
@@ -2978,7 +2988,7 @@ namespace hemelb
 																								(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																								start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																								lower_Fluid_index, (max_Fluid_index+1),
-																								mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																								mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																								);
 					}
 				} // Closes the if(n_LocalInlets != 0)
@@ -3028,7 +3038,7 @@ namespace hemelb
 																								(distribn_t*)mLatDat->GPUDataAddr_Inlet_velocityTable,
 																								start_Fluid_ID_givenColStreamType, site_Count_givenColStreamType,
 																								lower_Fluid_index, (max_Fluid_index+1),
-																								mState->GetTimeStep(), mState->GetTotalTimeSteps()
+																								mState->GetTimeStep(), mState->GetTotalTimeSteps(), mState->GetInitTimeStep()
 																								);
 					}
 				} // Closes the if(n_LocalInlets != 0)
@@ -3147,12 +3157,6 @@ namespace hemelb
 
 				//----------------------------------------------------------------------
 				// Vel BCs related
-				/*
-				if(mLatDat->GPUDataAddr_Inlet_velocityTable){
-					cudaStatus = cudaFree(mLatDat->GPUDataAddr_Inlet_velocityTable);
-					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree Velocity Table failed\n"); finalise_GPU_res=false; }
-				}*/
-
 
 				// Prefactor Wall Momemtum Correction
 				/*void *GPUDataAddr_wallMom_prefactor_correction_Inlet_Edge;
@@ -3191,11 +3195,11 @@ namespace hemelb
 				}
 
 				if (hemeIoletBC_Inlet == "LADDIOLET"){
-
 					if(mLatDat->GPUDataAddr_Inlet_velocityTable){
-                                 	       cudaStatus = cudaFree(mLatDat->GPUDataAddr_Inlet_velocityTable);
-                                        	if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree Velocity Table failed\n"); finalise_GPU_res=false; }
-                                	}
+						cudaStatus = cudaFree(mLatDat->GPUDataAddr_Inlet_velocityTable);
+						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree Velocity Table failed\n"); finalise_GPU_res=false; }
+					}
+
 					if(GPUDataAddr_wallMom_correction_Inlet_Edge){
 						cudaStatus = cudaFree(GPUDataAddr_wallMom_correction_Inlet_Edge);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree wall mom correction (1) inlet  failed\n"); finalise_GPU_res=false; }
@@ -4613,13 +4617,29 @@ template<class LatticeType>
 							iolets::InOutLetFileVelocity* iolet =
 		                dynamic_cast<iolets::InOutLetFileVelocity*>(mInletValues->GetLocalIolet(index_inlet));
 
-							for (int timeStep=0; timeStep<total_TimeSteps+1; timeStep++)
+							//----------------
+							// Feb 2024
+							// Does not consider the Case RESTARTING the simulation (Checkpointing functionality)
+							// i.e. initial timeStep!=1
+							// TODO!!!
+
+							// Feb 2024 - IZ (case checkpointing) - Get the initial time of the simulation
+							uint64_t t_start=mState->GetInitTimeStep();
+							//
+							//printf("From lb.hpp - Initial Time %d \n", t_start);
+							//for (int timeStep=0; timeStep<total_TimeSteps+1; timeStep++)
+							for (int timeStep=t_start; timeStep<(t_start + total_TimeSteps+1); timeStep++)
 							{
 								distribn_t velTemp = *(iolet->return_VelocityTable(timeStep)); 	// Read the values from velocityTable
-								Data_dbl_Inlet_velocityTable[index_inlet*(total_TimeSteps+1)+timeStep] = velTemp;
-								//if(timeStep>=4300 &&  timeStep<4310 )
-								//	printf("From lb.hpp - velocityTable[timeStep = %d] = %0.8e, InletID: %d \n", timeStep, velTemp, index_inlet);
+
+								// Shift the velocity values according to the start time (t_start)
+								Data_dbl_Inlet_velocityTable[index_inlet*(total_TimeSteps+1)+timeStep-t_start] = velTemp;
+								//Initially: Data_dbl_Inlet_velocityTable[index_inlet*(total_TimeSteps+1)+timeStep] = velTemp;
+
+								//if(timeStep<=5010 )
+								//printf("From lb.hpp - velocityTable[timeStep = %d] = %0.8e, InletID: %d \n", timeStep, velTemp, index_inlet);
 							}
+							//----------------
 						}
 
 						cudaStatus = cudaMalloc((void**)&(mLatDat->GPUDataAddr_Inlet_velocityTable),  TotalMem_Inlet_velocityTable);
@@ -6770,9 +6790,18 @@ template<class LatticeType>
 	template<class LatticeType>
 		void LBM<LatticeType>::SetInitialConditions(const net::IOCommunicator& ioComms)
 		{
+			// icond
 			auto icond = InitialCondition::FromConfig(mSimConfig->GetInitialCondition());
-			icond.SetFs<LatticeType>(mLatDat, ioComms);
-			icond.SetTime(mState);
+			icond.SetFs<LatticeType>(mLatDat, ioComms, mState);
+
+			//icond.SetTime(mState);
+			//icond.SetInitTime(mState, ioComms);
+
+			//---------------
+			// Testing - Remove later
+			uint64_t time_currentStep = mState->GetTimeStep();
+			printf("Current Time-Step as set in SetInitialConditions (lb.hpp) %ld \n", time_currentStep);
+			//---------------
 		}
 
 /** JM Method before trying to bring Checkpointing in
@@ -6876,7 +6905,9 @@ template<class LatticeType>
 				cudaError_t cudaStatus;
 
 				// Boolean variable for sending macroVariables to GPU global memory (avoids the if statement time%_Send_MacroVars_DtH==0 in the GPU kernels)
-				bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
+				// Consider using: a) propertyCache.densityCache.RequiresRefresh() || propertyCache.velocityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()
+				bool Write_GlobalMem = (propertyCache.densityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) ? 1 : 0;
+				//bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
 
 				// Before the collision starts make sure that the swap of distr. functions at the previous step has Completed
 				//if (myPiD!=0) cudaStreamSynchronize(stream_SwapOldAndNew);
@@ -7656,7 +7687,8 @@ template<class LatticeType>
 				cudaError_t cudaStatus;
 
 				// Boolean variable for sending macroVariables to GPU global memory (avoids the if statement time%_Send_MacroVars_DtH==0 in the GPU kernels)
-				bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
+				//bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
+				bool Write_GlobalMem = (propertyCache.densityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) ? 1 : 0;
 
 				// Consider whether to send boolean output_shearStressMagn (evaluate wall shear stress magnitude on the GPU) to GPU constant memory, or just pass as an argument to the kernels
 				bool output_shearStressMagn = true;
@@ -8271,7 +8303,7 @@ template<class LatticeType>
 						cudaStatus = cudaMemcpy( &(mLatDat->h_Stability_GPU_mLatDat), &(((int*)mLatDat->d_Stability_GPU_mLatDat)[0]), sizeof(int), cudaMemcpyDeviceToHost);
 
 						if(mLatDat->h_Stability_GPU_mLatDat==0)
-							printf("Rank = %d - Unstable SImulation: Host Stability flag: %d \n\n", myPiD, mLatDat->h_Stability_GPU_mLatDat);
+							printf("Rank = %d - Unstable Simulation: Host Stability flag: %d \n\n", myPiD, mLatDat->h_Stability_GPU_mLatDat);
 				}
 
 /*
@@ -8531,20 +8563,34 @@ template<class LatticeType>
 				//========================================================================================================
 
 				//========================================================================================================
-				// Get MacroVariables (density/pressure, velocity etc)
-				//	Think where to place this!!! To do!!!
-				// TODO: Need to use the frequency as specified in the input file (.xml) - Need to add something there
+				// Get MacroVariables (density/pressure, velocity etc) - D2H
+
+				// TODO: Need to use the frequency as specified in the input file (.xml)
 				// Or use the variable frequency_WriteGlobalMem defined in cuda_params.h
 
 				// Dec 2023
 				// TODO: Another option would be to use (in Read_Macrovariables_GPU_to_CPU) the variables:
-				// 1. Density/Pressure: 	propertyCache.densityCache.RequiresRefresh()
-				// 2. Velocity: 					propertyCache.velocityCache.RequiresRefresh()
-				// 3. Wall Shear Stress: propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()
+				// 		1. Density/Pressure: 	propertyCache.densityCache.RequiresRefresh()
+				// 		2. Velocity: 					propertyCache.velocityCache.RequiresRefresh()
+				// 		3. Wall Shear Stress: propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()
+				// Actually the first 2 RequiresRefresh at every time-step... TODO - Check another approach...
+				//if (mState->GetTimeStep() % frequency_WriteGlobalMem == 0)
+				lb::MacroscopicPropertyCache& propertyCache = GetPropertyCache();
+				bool requires_MacroVars = (propertyCache.densityCache.RequiresRefresh() ||
+																		propertyCache.velocityCache.RequiresRefresh() ||
+																		propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()
+																	) ? 1 : 0;
+				/*printf("Rank = %d, Time = %ld, requires_MacroVars = %d, dens = %d, vel = %d, shear = %d \n", myPiD, mState->GetTimeStep(), requires_MacroVars,
+							 	propertyCache.densityCache.RequiresRefresh(),
+								propertyCache.velocityCache.RequiresRefresh(),
+								propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()
+								);
+								*/
+
+				//if(requires_MacroVars)
 				if (mState->GetTimeStep() % frequency_WriteGlobalMem == 0)
 				{
-					// Check whether the hemeLB picks up the macroVariables at the EndIteration step???
-					// Only the data in propertyCache, i.e. propertyCache.densityCache and propertyCache.velocityCache
+					//printf("Rank = %d, Time = %ld, requires_MacroVars = %d \n", myPiD, mState->GetTimeStep(), requires_MacroVars );
 					lb::MacroscopicPropertyCache& propertyCache = GetPropertyCache();
 
 					if(myPiD!=0){
@@ -8553,7 +8599,6 @@ template<class LatticeType>
 						if (!res_Read_MacroVars_FromGPU) printf("Rank: %d - Time: %ld - Error getting macroVars from GPU ... \n", myPiD, mState->GetTimeStep());
 					}
 				}
-
 				//----------------------------
 
 				// If checkpointing  functionality is required
@@ -8564,29 +8609,6 @@ template<class LatticeType>
 					if(myPiD!=0) Read_DistrFunctions_GPU_to_CPU_FluidSites();
 				}
 				//========================================================================================================
-
-				// Make sure the swap of distr. functions is completed, before the next iteration
-
-				/*// Testing - Remove later:
-				if (myPiD!=0)
-				{
-					cudaDeviceSynchronize(); // Included a cudaStreamSynchronize at the beginning of PreSend(); Should do the same job
-
-					//kernels::HydroVarsBase<LatticeType> hydroVars(geometry::Site<geometry::LatticeData> const &site);
-
-					for (site_t site_Index=0; site_Index< mLatDat->GetLocalFluidSiteCount(); site_Index++)
-					{
-						geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(site_Index);
-
-						// Need to make it more general - Pass the Collision Kernel Impl. typename - To do!!!
-			    	//kernels::HydroVars<lb::kernels::LBGK<lb::lattices::D3Q19> > hydroVars(site);
-						kernels::HydroVars<LB_KERNEL> hydroVars(site);
-						//printf("Density from densityCache: %.5f \n\n", propertyCache.densityCache.Get(site_Index));
-						printf("Density from hydroVars: %.5f \n\n", hydroVars.density);
-					}
-					// Testing fails... Density = 0 from hydroVars.density...
-				}
-				*/
 
 #else // If computations on CPU
 

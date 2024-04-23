@@ -129,6 +129,14 @@ namespace hemelb
         {
           return totalTimeSteps;
         }
+
+        //Get the initial_timeStep
+        LatticeTimeStep GetInitTimeStep() const
+        {
+          return initial_timeStep;
+        }
+        //
+
         LatticeTimeStep GetWarmUpSteps() const
         {
           return warmUpSteps;
@@ -162,34 +170,35 @@ namespace hemelb
           return colloidConfigPath;
         }
 
-	float GetElasticWallStiffness() const
-	{
-	  return elasticWallStiffness;
-	}
-	/**
-         * True if the XML file has a section specifying colloids.
-         * @return
-         */
+        float GetElasticWallStiffness() const
+        {
+          return elasticWallStiffness;
+        }
+
+        /**
+          * True if the XML file has a section specifying colloids.
+          * @return
+        */
         bool HasColloidSection() const;
 
         /**
-         * Returns the pressure to be used to initialise all the fluid sites in the domain
-         * @return initial pressure
-         */
+        * Returns the pressure to be used to initialise all the fluid sites in the domain
+        * @return initial pressure
+        */
         LatticeDensity GetInitialPressure() const;
 
 
         // Get the initial condtion config
         inline const ICConfig& GetInitialCondition() const {
-	  return icConfig;
-	}
+      	  return icConfig;
+      	}
 
-	const util::UnitConverter& GetUnitConverter() const;
+      	const util::UnitConverter& GetUnitConverter() const;
 
         /**
-         * Return the configuration of various checks/test
-         * @return monitoring configuration
-         */
+        * Return the configuration of various checks/test
+        * @return monitoring configuration
+        */
         const MonitoringConfig* GetMonitoringConfiguration() const;
 
       protected:
@@ -300,8 +309,6 @@ namespace hemelb
         std::string mapFilePath;
         int latticeId;
 
-
-
         float maxVelocity;
         float maxStress;
         lb::StressTypes stressType;
@@ -321,6 +328,7 @@ namespace hemelb
         std::vector<lb::iolets::InOutLet*> outlets;
         PhysicalTime timeStepSeconds;
         unsigned long totalTimeSteps;
+        unsigned long initial_timeStep;
         unsigned long warmUpSteps;
         PhysicalDistance voxelSizeMetres;
         PhysicalPosition geometryOriginMetres;
