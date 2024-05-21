@@ -15,15 +15,15 @@ option(HEMELB_STATIC_ASSERT "use simple compile-time assertions" ON)
 option(HEMELB_TRACER_PARTICLES "use particles as tracers" ON)
 option(HEMELB_USE_ALL_WARNINGS_GNU "show all compiler warnings on development builds (gnu-style-compilers)" OFF)
 option(HEMELB_USE_SSE3 "use SSE3 intrinsics" OFF)
-option(HEMELB_USE_VELOCITY_WEIGHTS_FILE "use velocity weights file" ON)
+option(HEMELB_USE_VELOCITY_WEIGHTS_FILE "use velocity weights file" OFF)
 option(HEMELB_USE_GMYPLUS "use GMY+ format" OFF)
 option(HEMELB_USE_MPI_CALL "use standard MPI functions when reading blocks" OFF)
 option(HEMELB_USE_MPI_WIN "" OFF)
-option(HEMELB_USE_MPI_PARALLEL_IO "Use MPI Parallel I/O for reading geometries" OFF)
+option(HEMELB_USE_MPI_PARALLEL_IO "Use MPI Parallel I/O for reading geometries" ON)
 option(HEMELB_USE_BIGMPI "use BigMPI to read data from file" OFF)
 option(HEMELB_USE_PARMETIS "use ParMETIS" OFF)
 option(HEMELB_USE_GPU "use GPU accel" ON)
-option(HEMELB_CUDA_AWARE_MPI "use CUDA-AWARE MPI" ON)
+option(HEMELB_CUDA_AWARE_MPI "use CUDA-AWARE MPI" OFF)
 option(HEMELB_USE_ZOLTAN "use Zoltan" OFF)
 option(HEMELB_USE_VEL_WEIGHTS_ON_GPU "use vel weights on GPU for Vel BCs - subtype File" OFF)
 #option(HEMELB_VALIDATE_GEOMETRY "validate geometry" OFF)
@@ -49,13 +49,13 @@ set(HEMELB_KERNEL "LBGK"
 	CACHE STRING "kernel: 'LBGK','EntropicAnsumali','EntropicChik','MRT','TRT','NNCY','NNCYMOUSE','NNC','NNTPL'")
 set(HEMELB_WALL_BOUNDARY "SIMPLEBOUNCEBACK"
 	CACHE STRING "boundary conditions to be used at the walls: 'BFL','GZS','SIMPLEBOUNCEBACK','JUNKYANG'")
-set(HEMELB_INLET_BOUNDARY "LADDIOLET"
+set(HEMELB_INLET_BOUNDARY "NASHZEROTHORDERPRESSUREIOLET"
 	CACHE STRING "boundary conditions to be used at the inlet: 'NASHZEROTHORDERPRESSUREIOLET','LADDIOLET'")
 set(HEMELB_OUTLET_BOUNDARY "NASHZEROTHORDERPRESSUREIOLET"
 	CACHE STRING "boundary conditions to be used at the outlets: 'NASHZEROTHORDERPRESSUREIOLET','LADDIOLET'")
 set(HEMELB_COMPUTE_ARCHITECTURE "NEUTRAL"
 	CACHE STRING "architecture of the machine being used 'INTELSANDYBRIDGE','AMDBULLDOZER','NEUTRAL','ISBFILEVELOCITYINLET'")
-set(HEMELB_WALL_INLET_BOUNDARY "LADDIOLETSBB"
+set(HEMELB_WALL_INLET_BOUNDARY "NASHZEROTHORDERPRESSURESBB"
 	CACHE STRING "boundary conditions to be used at corners between walls and inlets: 'NASHZEROTHORDERPRESSURESBB','NASHZEROTHORDERPRESSUREBFL','LADDIOLETSBB','LADDIOLETBFL'")
 set(HEMELB_WALL_OUTLET_BOUNDARY "NASHZEROTHORDERPRESSURESBB"
 	CACHE STRING "boundary conditions to be used at corners between walls and outlets: 'NASHZEROTHORDERPRESSURESBB','NASHZEROTHORDERPRESSUREBFL','LADDIOLETSBB','LADDIOLETBFL'")
@@ -155,11 +155,11 @@ if(HEMELB_USE_GPU)
 	set(CUDA_PROPAGATE_HOST_FLAGS ON)
 
 
-	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_60")
+	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_80")
 	if(${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
 	  message("gnu COMPILER")
-	    set(CMAKE_CUDA_FLAGS "-ccbin g++ --compiler-options '-g' '-G' -gencode arch=compute_75,code=sm_75 -lineinfo --ptxas-options=-v --disable-warnings -maxrregcount 200")
-	    set(CMAKE_CUDA_FLAGS_DEBUG " -ccbin g++ --compiler-options '-msse3' -gencode arch=compute_35,code=sm_35 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_75,code=sm_75 -lineinfo --ptxas-options=-v --disable-warnings")
+	    set(CMAKE_CUDA_FLAGS "-ccbin g++ -gencode arch=compute_80,code=sm_80 -lineinfo --ptxas-options=-v --disable-warnings -maxrregcount 200")
+	    set(CMAKE_CUDA_FLAGS_DEBUG " -ccbin g++ --compiler-options '-g' '-G' -gencode arch=compute_35,code=sm_35 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_75,code=sm_75 -lineinfo --ptxas-options=-v --disable-warnings")
 	    #set(CMAKE_CUDA_FLAGS_DEBUG " -ccbin g++ --compiler-options '-msse3' -gencode arch=compute_35,code=sm_35 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_75,code=sm_75 -lineinfo --disable-warnings")
 	elseif( ${CMAKE_CXX_COMPILER_ID} STREQUAL "Intel")
 	    # using Intel C++

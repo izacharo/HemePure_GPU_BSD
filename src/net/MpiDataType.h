@@ -13,6 +13,7 @@
 #else
 # include <stdint.h>
 #endif
+# include <stddef.h>
 
 #define HEMELB_MPI_TYPE_BEGIN(outType, Type, n) \
   MPI_Datatype outType = MPI_DATATYPE_NULL; \
