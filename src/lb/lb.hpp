@@ -6940,8 +6940,8 @@ template<class LatticeType>
 
 				// Boolean variable for sending macroVariables to GPU global memory (avoids the if statement time%_Send_MacroVars_DtH==0 in the GPU kernels)
 				// Consider using: a) propertyCache.densityCache.RequiresRefresh() || propertyCache.velocityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()
-				bool Write_GlobalMem = (propertyCache.densityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) ? 1 : 0;
-				//bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
+				//bool Write_GlobalMem = (propertyCache.densityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) ? 1 : 0;
+				bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
 
 				// Before the collision starts make sure that the swap of distr. functions at the previous step has Completed
 				//if (myPiD!=0) cudaStreamSynchronize(stream_SwapOldAndNew);
@@ -7721,8 +7721,8 @@ template<class LatticeType>
 				cudaError_t cudaStatus;
 
 				// Boolean variable for sending macroVariables to GPU global memory (avoids the if statement time%_Send_MacroVars_DtH==0 in the GPU kernels)
-				//bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
-				bool Write_GlobalMem = (propertyCache.densityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) ? 1 : 0;
+				bool Write_GlobalMem = (mState->GetTimeStep()%frequency_WriteGlobalMem == 0) ? 1 : 0;
+				//bool Write_GlobalMem = (propertyCache.densityCache.RequiresRefresh() || propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) ? 1 : 0;
 
 				// Consider whether to send boolean output_shearStressMagn (evaluate wall shear stress magnitude on the GPU) to GPU constant memory, or just pass as an argument to the kernels
 				bool output_shearStressMagn = true;
