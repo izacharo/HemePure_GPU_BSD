@@ -347,10 +347,9 @@ void SimulationMaster::check_GPU_capabilities()
 		if(localRank==0) std::printf("Rank %d: Detected %d CUDA Capable device(s)\n", localRank, dev_count);
 	}
 
-
+	/*
 	// Set the current GPU device
 	cudaError_t cudaStatus;
-	int device;
 	if(dev_count>1 && localRank!=0){
 		cudaStatus = cudaSetDevice((localRank-1)%dev_count);		//Set GPU - Rank 0 does not participate
 		if (cudaStatus != cudaSuccess) {
@@ -358,20 +357,39 @@ void SimulationMaster::check_GPU_capabilities()
 			Abort();
 			//return false;
 		}
+	}*/
+
+	//------------
+	cudaError_t cudaStatus;
+	// Only one device per node
+	if ( dev_count == 1 )  {
+	  if ( localRank != 0 ) {
+	    cudaStatus = cudaSetDevice(0);     //Set GPU - Rank 0 does not participate
+        if (cudaStatus != cudaSuccess) {
+            fprintf(stderr, "GPU device setting failed\n");
+            Abort();
+        }
+			}
 	}
-
-	cudaGetDevice(&device);
-	cudaDeviceProp deviceProp;
-	cudaGetDeviceProperties(&deviceProp, device);
-	// std::printf("Using device %d: %s - Assigned to Proc# %i \n\n", device, deviceProp.name, localRank);
-	// if(localRank==0) printf("Using GPU device: %s \n\n", deviceProp.name);
-
-	/*
-	cudaError_t cudaerr = cudaDeviceSynchronize();
-	if (cudaerr != cudaSuccess)
-	  printf("kernel launch failed with error \"%s\".\n",
-		 cudaGetErrorString(cudaerr));
-	*/
+	else {
+	// Set the current GPU device
+		if(dev_count>1 && localRank!=0){
+			// BJ: Previously this was (localRank-1) % dev_count
+			// I am going to leave it as localRank because the only reason to decrement would be
+			// to use all the GPUs on node 0. On any largeish run generally we we will have many MPIs
+			// and leaving 1 GPU device unused will either happen anyway, or we may need to use a Hydra like
+			// launcher and launch NGPUs+1 processes on node 0, and NGPUs processes elsewhere.
+			// Knowing that local rank N attaches to GPU N in general (leaving instead device 0 unused on Node 0)
+			// can make GPU/NUMA and Network bindings more straightforward
+			cudaStatus = cudaSetDevice((localRank-1)%dev_count);		//Set GPU - Rank 0 does not participate
+			fprintf(stderr, "LocalRank %d attaching to GPU Device %d\n", localRank, (localRank-1)%dev_count);
+			if (cudaStatus != cudaSuccess) {
+				fprintf(stderr, "GPU device setting failed\n");
+				Abort();
+			}
+		}
+	}
+	
 }
 #endif
 // =============================================================================================
