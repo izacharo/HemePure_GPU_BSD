@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/CMakeFiles/ParMETIS"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/CMakeFiles/ParMETIS.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/CMakeFiles/ParMETIS-complete.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/ParMETIS-prefix/src/ParMETIS-stamp/ParMETIS-build.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/ParMETIS-prefix/src/ParMETIS-stamp/ParMETIS-configure.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/ParMETIS-prefix/src/ParMETIS-stamp/ParMETIS-download.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/ParMETIS-prefix/src/ParMETIS-stamp/ParMETIS-install.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/ParMETIS-prefix/src/ParMETIS-stamp/ParMETIS-mkdir.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/ParMETIS-prefix/src/ParMETIS-stamp/ParMETIS-patch.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/ParMETIS-prefix/src/ParMETIS-stamp/ParMETIS-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"ParMETIS"
+		],
+		"name" : "ParMETIS"
+	}
+}

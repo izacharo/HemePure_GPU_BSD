@@ -999,463 +999,250 @@ namespace hemelb
 			//bool LBM<LatticeType>::Read_Macrovariables_GPU_to_CPU(int64_t firstIndex, int64_t siteCount, lb::MacroscopicPropertyCache& propertyCache, kernels::HydroVars<LB_KERNEL>& hydroVars(geometry::Site<geometry::LatticeData>&_site)) // Is it necessary to use lb::MacroscopicPropertyCache& propertyCache or just propertyCache, as it is being initialised with the LBM constructor???
 			bool LBM<LatticeType>::Read_Macrovariables_GPU_to_CPU(int64_t firstIndex, int64_t siteCount, lb::MacroscopicPropertyCache& propertyCache)
 			{
-				/**
-				Remember to address the following point in the future - Only valid for the LBGK collision kernel:
-				Need to make it more general - Pass the Collision Kernel Impl. typename - To do!!!
-				kernels::HydroVars<lb::kernels::LBGK<lb::lattices::D3Q19> > hydroVars(site);
-				*/
 				cudaError_t cudaStatus;
 				bool res_Read_MacroVars = true;
 
-			  // Total number of fluid sites
-			  uint64_t nFluid_nodes = mLatDat->GetLocalFluidSiteCount(); // Actually GetLocalFluidSiteCount returns localFluidSites of type int64_t (site_t)
+				// Total number of fluid sites
+				uint64_t nFluid_nodes = mLatDat->GetLocalFluidSiteCount(); // Actually GetLocalFluidSiteCount returns localFluidSites of type int64_t (site_t)
 
-  			  distribn_t* dens_GPU=nullptr;
-			  distribn_t* vx_GPU=nullptr;
-			  distribn_t* vy_GPU= nullptr;
-			  distribn_t* vz_GPU= nullptr;	
-			  unsigned long long MemSz;
+				// Use static so that it is initialised only once to nullptr (first time the function is used)
+				static distribn_t* dens_GPU = nullptr;
+				static distribn_t* vx_GPU = nullptr;
+				static distribn_t* vy_GPU = nullptr;
+				static distribn_t* vz_GPU = nullptr;
 
-			  // Create a vector with these pointers
-			  std::vector<distribn_t*> MacroVarsPointers = {dens_GPU, vx_GPU, vy_GPU, vz_GPU};
-			  //--------------------------------------------------------------------------
-			  //	a. Density
-			  if (propertyCache.densityCache.RequiresRefresh()) {
-			    dens_GPU = new distribn_t[siteCount];
-			    if(dens_GPU==0){
-			      printf("Density Memory allocation failure");
-			      res_Read_MacroVars = false; //return false;
-			    }
-			    
-			    MemSz = siteCount*sizeof(distribn_t);
-			    
-			    //cudaStatus = cudaMemcpy(dens_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[firstIndex]), MemSz, cudaMemcpyDeviceToHost);
-			    cudaStatus = cudaMemcpyAsync(dens_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			    if(cudaStatus != cudaSuccess){
-			      printf("GPU memory transfer for density failed\n");
-			      delete[] dens_GPU;
-			      dens_GPU=nullptr;
-			      res_Read_MacroVars = false; //return res_Read_MacroVars;
-			    }
-			  }
-			  //--------------------------------------------------------------------------
-			  
-			  // b. Velocity
-			  if (propertyCache.velocityCache.RequiresRefresh()) {
-			    vx_GPU = new distribn_t[siteCount];
-			    vy_GPU = new distribn_t[siteCount];
-			    vz_GPU = new distribn_t[siteCount];
-			    
-			    if(vx_GPU==0 || vy_GPU==0 || vz_GPU==0){
-			      printf("Memory allocation failure");
-			      res_Read_MacroVars = false;
-			    }
-			    
-			    cudaStatus = cudaMemcpyAsync(vx_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[1ULL*nFluid_nodes + firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			    //cudaStatus = cudaMemcpyAsync(vx_GPU, &(((distribn_t*)GMem_dbl_MacroVars)[1ULL*nFluid_nodes]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Vel);
-			    if(cudaStatus != cudaSuccess){
-			      printf("GPU memory transfer Vel(1) failed\n");
-			      delete[] vx_GPU;
-			      vx_GPU=nullptr;
-			      res_Read_MacroVars = false;
-			    }
-			    
-			    cudaStatus = cudaMemcpyAsync(vy_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[2ULL*nFluid_nodes + firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			    //cudaStatus = cudaMemcpyAsync(vy_GPU, &(((distribn_t*)GMem_dbl_MacroVars)[2ULL*nFluid_nodes]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Vel);
-			    if(cudaStatus != cudaSuccess){
-			      printf("GPU memory transfer Vel(2) failed\n");
-			      delete[] vy_GPU;
-			      vy_GPU=nullptr;
-			      res_Read_MacroVars = false;
-			    }
-			    
-			    cudaStatus = cudaMemcpyAsync(vz_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[3ULL*nFluid_nodes + firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			    //cudaStatus = cudaMemcpyAsync(vz_GPU, &(((distribn_t*)GMem_dbl_MacroVars)[3ULL*nFluid_nodes]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Vel);
-			    if(cudaStatus != cudaSuccess){
-			      printf("GPU memory transfer Vel(3) failed\n");
-			      delete[] vz_GPU;
-			      vz_GPU=nullptr;
-			      res_Read_MacroVars = false;
-			    }
-			  }
-			  //--------------------------------------------------------------------------
-			  //hemelb::check_cuda_errors(__FILE__, __LINE__, myPiD); // Check for last cuda error: Remember that it is in DEBUG flag
-			  
-			  //======================================================================
-			  // c. wall shear stress magnitude
-			  // 	Note that values are available only for the sites next to walls - Fill the rest
-			  // 		c.1. Copy the values first (D2H)
-			  //		c.2. Place in appropriate location in propertyCache
-			  
-			  //----------------------------------------
-			  // c.1. Copy the values first (D2H)
-			  //				Provide the sites' info that are involved
-			  //	 			Site Count and Starting Indices
-			  // 				Type below stands for:
-			  //						walls (type2), Inlets with walls (type5), Outlets with walls(type6)
-			  
-			  //	I. Domain Edge
-			  site_t start_Index_Edge_Type2 = mLatDat->GetMidDomainSiteCount() + mLatDat->GetDomainEdgeCollisionCount(0);
-			  site_t total_numElements_Edge_Type2 = mLatDat->GetDomainEdgeCollisionCount(1);
-			  
-			  site_t start_Index_Edge_Type5 = mLatDat->GetMidDomainSiteCount() + mLatDat->GetDomainEdgeCollisionCount(0) + mLatDat->GetDomainEdgeCollisionCount(1)
-			    + mLatDat->GetDomainEdgeCollisionCount(2) + mLatDat->GetDomainEdgeCollisionCount(3);
-			  site_t total_numElements_Edge_Type5 = mLatDat->GetDomainEdgeCollisionCount(4);
-			  
-			  site_t start_Index_Edge_Type6 = mLatDat->GetMidDomainSiteCount() + mLatDat->GetDomainEdgeCollisionCount(0) + mLatDat->GetDomainEdgeCollisionCount(1)
-			    + mLatDat->GetDomainEdgeCollisionCount(2) + mLatDat->GetDomainEdgeCollisionCount(3) + mLatDat->GetDomainEdgeCollisionCount(4);
-			  site_t total_numElements_Edge_Type6 = mLatDat->GetDomainEdgeCollisionCount(5);
-			  
-			  // II. Inner Domain
-			  site_t start_Index_Inner_Type2 = mLatDat->GetMidDomainCollisionCount(0);
-			  site_t total_numElements_Inner_Type2 = mLatDat->GetMidDomainCollisionCount(1);
-			  
-			  site_t start_Index_Inner_Type5 = mLatDat->GetMidDomainCollisionCount(0) + mLatDat->GetMidDomainCollisionCount(1) + mLatDat->GetMidDomainCollisionCount(2) + mLatDat->GetMidDomainCollisionCount(3);
-			  site_t total_numElements_Inner_Type5 = mLatDat->GetMidDomainCollisionCount(4);
-			  
-			  site_t start_Index_Inner_Type6 = mLatDat->GetMidDomainCollisionCount(0) + mLatDat->GetMidDomainCollisionCount(1) + mLatDat->GetMidDomainCollisionCount(2)
-			    + mLatDat->GetMidDomainCollisionCount(3) + mLatDat->GetMidDomainCollisionCount(4);
-			  site_t total_numElements_Inner_Type6 = mLatDat->GetMidDomainCollisionCount(5);
-			  //----------------------------------------
-			  
-			  // Do the mem copies for the six different possible options ... Done!!!
-			  /*void *GPUDataAddr_WallShearStressMagn_Edge_Type2;	// Type 2 - Walls
-			    void *GPUDataAddr_WallShearStressMagn_Edge_Type5;	// Type 5 - Inlets with walls
-			    void *GPUDataAddr_WallShearStressMagn_Edge_Type6;	// Type 6 - Outlets with walls
-			    void *GPUDataAddr_WallShearStressMagn_Inner_Type2;
-			    void *GPUDataAddr_WallShearStressMagn_Inner_Type5;
-			    void *GPUDataAddr_WallShearStressMagn_Inner_Type6;
-			  */
-			  distribn_t *WallShearStressMagn_Edge_Type2_GPU, *WallShearStressMagn_Edge_Type5_GPU, *WallShearStressMagn_Edge_Type6_GPU;
-			  distribn_t *WallShearStressMagn_Inner_Type2_GPU, *WallShearStressMagn_Inner_Type5_GPU, *WallShearStressMagn_Inner_Type6_GPU;
-			  
-			  // Restrict the frequency to the specified through the input file
-			  if (propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()){
-			    //-----------------------------------------------------
-			    // I. Domain Edge:
-				// I.1.
-			    site_t site_count_WallShearStress = total_numElements_Edge_Type2;
-			    if (site_count_WallShearStress!=0){
-			      WallShearStressMagn_Edge_Type2_GPU = new distribn_t[site_count_WallShearStress];
-			      
-			      if(WallShearStressMagn_Edge_Type2_GPU==0){
-				printf("Wall Shear Stress magnitude (1) allocation failure");
-				res_Read_MacroVars = false;
-			      }
+				//static size_t allocatedSize = 0;
+				unsigned long long MemSz = siteCount * sizeof(distribn_t);
 
-			      MemSz = site_count_WallShearStress*sizeof(distribn_t);
-			      cudaStatus = cudaMemcpyAsync(WallShearStressMagn_Edge_Type2_GPU, GPUDataAddr_WallShearStressMagn_Edge_Type2, MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			      
-			      if(cudaStatus != cudaSuccess){
-				printf("GPU memory transfer for Wall Shear Stress magnitude (1) failed\n");
-				delete[] WallShearStressMagn_Edge_Type2_GPU;
-				res_Read_MacroVars = false;
-			      }
-			    }
-			    
-			    // I.2.
-			    site_count_WallShearStress = total_numElements_Edge_Type5;
-			    if (site_count_WallShearStress!=0){
-			      WallShearStressMagn_Edge_Type5_GPU = new distribn_t[site_count_WallShearStress];
-			      
-			      if(WallShearStressMagn_Edge_Type5_GPU==0){
-				printf("Wall Shear Stress magnitude (2) allocation failure");
-				res_Read_MacroVars = false;
-			      }
-			      
-			      MemSz = site_count_WallShearStress*sizeof(distribn_t);
-			      
-			      cudaStatus = cudaMemcpyAsync(WallShearStressMagn_Edge_Type5_GPU, GPUDataAddr_WallShearStressMagn_Edge_Type5, MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			      
-			      if(cudaStatus != cudaSuccess){
-				printf("GPU memory transfer for Wall Shear Stress magnitude (2) failed\n");
-				delete[] WallShearStressMagn_Edge_Type5_GPU;
-				res_Read_MacroVars = false;
-			      }
-			    }
-			    
-			    // I.3.
-			    site_count_WallShearStress = total_numElements_Edge_Type6;
-			    if (site_count_WallShearStress!=0){
-			      WallShearStressMagn_Edge_Type6_GPU = new distribn_t[site_count_WallShearStress];
-			      
-			      if(WallShearStressMagn_Edge_Type6_GPU==0){
-				printf("Wall Shear Stress magnitude (3) allocation failure");
-				res_Read_MacroVars = false;
-			      }
-			      
-			      MemSz = site_count_WallShearStress*sizeof(distribn_t);
-			      
-			      cudaStatus = cudaMemcpyAsync(WallShearStressMagn_Edge_Type6_GPU, GPUDataAddr_WallShearStressMagn_Edge_Type6, MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			      
-			      if(cudaStatus != cudaSuccess){
-				printf("GPU memory transfer for Wall Shear Stress magnitude (3) failed\n");
-				delete[] WallShearStressMagn_Edge_Type6_GPU;
-				res_Read_MacroVars = false;
-			      }
-			    }
-			    
-			    //-----------------------------------------------------
-			    // II. Inner domain:
-			    // II.1.
-			    site_count_WallShearStress = total_numElements_Inner_Type2;
-			    if (site_count_WallShearStress!=0){
-			      WallShearStressMagn_Inner_Type2_GPU = new distribn_t[site_count_WallShearStress];
-			      
-			      if(WallShearStressMagn_Inner_Type2_GPU==0){
-				printf("Wall Shear Stress magnitude (4) allocation failure");
-				res_Read_MacroVars = false;
-			      }
-			      
-			      MemSz = site_count_WallShearStress*sizeof(distribn_t);
-			      cudaStatus = cudaMemcpyAsync(WallShearStressMagn_Inner_Type2_GPU, GPUDataAddr_WallShearStressMagn_Inner_Type2, MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			      //&(((distribn_t*)GPUDataAddr_dbl_MacroVars)[firstIndex])
-			      
-			      if(cudaStatus != cudaSuccess){
-				printf("GPU memory transfer for Wall Shear Stress magnitude (4) failed\n");
-				delete[] WallShearStressMagn_Inner_Type2_GPU;
-				res_Read_MacroVars = false;
-			      }
-			    }
-			    
-			    // II.2.
-			    site_count_WallShearStress = total_numElements_Inner_Type5;
-			    if (site_count_WallShearStress!=0){
-			      WallShearStressMagn_Inner_Type5_GPU = new distribn_t[site_count_WallShearStress];
-			      
-			      if(WallShearStressMagn_Inner_Type5_GPU==0){
-				printf("Wall Shear Stress magnitude (5) allocation failure");
-				res_Read_MacroVars = false;
-			      }
-			      
-			      MemSz = site_count_WallShearStress*sizeof(distribn_t);
-			      
-			      cudaStatus = cudaMemcpyAsync(WallShearStressMagn_Inner_Type5_GPU, GPUDataAddr_WallShearStressMagn_Inner_Type5, MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			      
-			      if(cudaStatus != cudaSuccess){
-				printf("GPU memory transfer for Wall Shear Stress magnitude (5) failed\n");
-				delete[] WallShearStressMagn_Inner_Type5_GPU;
-				res_Read_MacroVars = false;
-			      }
-			    }
-			    
-			    // II.3.
-			    site_count_WallShearStress = total_numElements_Inner_Type6;
-			    if (site_count_WallShearStress!=0){
-			      WallShearStressMagn_Inner_Type6_GPU = new distribn_t[site_count_WallShearStress];
-			      
-			      if(WallShearStressMagn_Inner_Type6_GPU==0){
-				printf("Wall Shear Stress magnitude (6) allocation failure");
-				res_Read_MacroVars = false;
-			      }
-			      
-			      MemSz = site_count_WallShearStress*sizeof(distribn_t);
-			      
-			      cudaStatus = cudaMemcpyAsync(WallShearStressMagn_Inner_Type6_GPU, GPUDataAddr_WallShearStressMagn_Inner_Type6, MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
-			      
-			      if(cudaStatus != cudaSuccess){
-				printf("GPU memory transfer for Wall Shear Stress magnitude (6) failed\n");
-				delete[] WallShearStressMagn_Inner_Type6_GPU;
-				res_Read_MacroVars = false;
-			      }
-			    }
-			  }
-			  //-----------------------------------------------------
-			  //======================================================================
-			  
-			  // Ensure that the mem.copies above will complete
-			  cudaStreamSynchronize(stream_Read_Data_GPU_Dens);
-			  //
-			  
-			  // Read only the density, velocity and fNew[] that needs to be passed to the CPU at the updated sites: The ones that had been updated in the GPU collision kernel
-			  // Only if required (if propertyCache.densityCache.RequiresRefresh() is true)
-			  if (propertyCache.densityCache.RequiresRefresh() || propertyCache.velocityCache.RequiresRefresh() )
-			    {
-			      for (site_t siteIndex = firstIndex; siteIndex < (firstIndex + siteCount); siteIndex++)
-				{
-				  geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
-				  // printf("site.GetIndex() = %lld Vs siteIndex = %lld \n\n", site.GetIndex(), siteIndex); // Works fine - Access to the correct site
-				  
-				  //
-				  // Need to make it more general - Pass the Collision Kernel Impl. typename - To do!!!
-				  kernels::HydroVars<LB_KERNEL> hydroVars(site);
-				  //kernels::HydroVars<lb::kernels::LBGK<lb::lattices::D3Q19> > hydroVars(site);
-				  //kernels::HydroVarsBase<LatticeType> hydroVars(site);
-				  
-				  // Pass the density and velocity to the hydroVars and the densityCache, velocityCache
-				  hydroVars.density = dens_GPU[siteIndex-firstIndex];
-				  hydroVars.velocity.x = vx_GPU[siteIndex-firstIndex];
-				  hydroVars.velocity.y = vy_GPU[siteIndex-firstIndex];
-				  hydroVars.velocity.z = vz_GPU[siteIndex-firstIndex];
-				  
-				  // TODO: I will need to change the following so that it gets updated only
-				  // if (propertyCache.densityCache.RequiresRefresh())
-				  // if (propertyCache.velocityCache.RequiresRefresh())
-				  propertyCache.densityCache.Put(siteIndex, hydroVars.density);		//propertyCache.densityCache.Put(site.GetIndex(), hydroVars.density);
-				  propertyCache.velocityCache.Put(siteIndex, hydroVars.velocity);	//propertyCache.velocityCache.Put(site.GetIndex(), hydroVars.velocity);
-				  
-				  // TODO: Check that the MacroVariables (density etc)  are actually written
-				  //printf("Reading Density: %.5f \n\n", dens_GPU[siteIndex-firstIndex]); // Successful !
-				  //printf("Reading Density from HydroVars: %.5f \n\n", hydroVars.density);
-				  
-				  // Wall Shear Stress Magnitude Case - Fill First the non-adjacent to walls sites
-				  if (propertyCache.wallShearStressMagnitudeCache.RequiresRefresh())
-				    {
-				      if (!site.IsWall())
-					{
-					  distribn_t stress = NO_VALUE; // constants.h:	const distribn_t NO_VALUE     = std::numeric_limits<distribn_t>::max();
-					  propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
-					}
-				    }
-				  //
-				  
+				// Allocate memory first (if not already allocated)
+				// a. Density
+				if (dens_GPU == nullptr){
+					cudaStatus = cudaHostAlloc((void**)&dens_GPU, MemSz, cudaHostAllocDefault);
+					memset(dens_GPU, 0, MemSz);
+					if (cudaStatus != cudaSuccess) {
+								printf("Density Memory allocation failure: %s\n", cudaGetErrorString(cudaStatus));
+								fflush(stdout);
+								res_Read_MacroVars = false;
+								return res_Read_MacroVars;
+						}
 				}
-			    }
-			  
-			  
-			  //----------------------------------------------------------------------
-			  // Wall Shear Stress Magnitude Case - Fill the adjacent to walls sites
-			  if (propertyCache.wallShearStressMagnitudeCache.RequiresRefresh())
-			    {
-			      distribn_t stress;
-			      //printf("Wall Shear Stress Magnitude section ... \n");
-			      
-			      // Loop through the various collision-streaming types
-			      // I. Domain Edge:
-			      // I.1.
-			      site_t site_count_WallShearStress = total_numElements_Edge_Type2;
-			      site_t start_Index = start_Index_Edge_Type2;
-			      if (site_count_WallShearStress!=0){
-				for (site_t siteIndex = start_Index; siteIndex < (start_Index + site_count_WallShearStress); siteIndex++)
-				  {
-				    geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
-				    
-				    stress = WallShearStressMagn_Edge_Type2_GPU[siteIndex-start_Index];
-				    propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
-				    //printf("Enters Section (1) - Edge Type 2\n" );
-				  }
-			      }
-			      
-			      // I.2.
-			      site_count_WallShearStress = total_numElements_Edge_Type5;
-			      start_Index = start_Index_Edge_Type5;
-			      if (site_count_WallShearStress!=0){
-				for (site_t siteIndex = start_Index; siteIndex < (start_Index + site_count_WallShearStress); siteIndex++)
-				  {
-				    geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
-				    
-				    stress = WallShearStressMagn_Edge_Type5_GPU[siteIndex-start_Index];
-				    propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
-				    //printf("Enters Section (2) - Edge Type 5\n" );
-				  }
-			      }
-			      
-			      // I.3.
-			      site_count_WallShearStress = total_numElements_Edge_Type6;
-			      start_Index = start_Index_Edge_Type6;
-			      if (site_count_WallShearStress!=0){
-				for (site_t siteIndex = start_Index; siteIndex < (start_Index + site_count_WallShearStress); siteIndex++)
-				  {
-				    geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
-				    
-				    stress = WallShearStressMagn_Edge_Type6_GPU[siteIndex-start_Index];
-				    propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
-				    //printf("Enters Section (3) - Edge Type 6\n" );
-				  }
-			      }
-			      
-			      //-----------------------------------------------------
-			      // II. Inner domain:
-			      // II.1.
-			      site_count_WallShearStress = total_numElements_Inner_Type2;
-			      start_Index = start_Index_Inner_Type2;
-			      if (site_count_WallShearStress!=0){
-				for (site_t siteIndex = start_Index; siteIndex < (start_Index + site_count_WallShearStress); siteIndex++)
-				  {
-				    geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
-				    
-				    stress = WallShearStressMagn_Inner_Type2_GPU[siteIndex-start_Index];
-				    //stress = 0.1;
-				    propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
-				    //printf("Enters Section (4) - Inner Type 2, siteIndex: %ld, stress: %5.5e \n", siteIndex, stress);
-				  }
-			      }
-			      
-			      // II.2.
-			      site_count_WallShearStress = total_numElements_Inner_Type5;
-			      start_Index = start_Index_Inner_Type5;
-			      if (site_count_WallShearStress!=0){
-				for (site_t siteIndex = start_Index; siteIndex < (start_Index + site_count_WallShearStress); siteIndex++)
-				  {
-				    geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
-				    
-				    stress = WallShearStressMagn_Inner_Type5_GPU[siteIndex-start_Index];
-				    propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
-				    //printf("Enters Section (5) - Inner Type 5, siteIndex: %ld, stress: %5.5e \n", siteIndex, stress);
-				  }
-			      }
-			      
-			      // II.3.
-			      site_count_WallShearStress = total_numElements_Inner_Type6;
-			      start_Index = start_Index_Inner_Type6;
-			      if (site_count_WallShearStress!=0){
-				for (site_t siteIndex = start_Index; siteIndex < (start_Index + site_count_WallShearStress); siteIndex++)
-				  {
-				    geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
-				    
-				    stress = WallShearStressMagn_Inner_Type6_GPU[siteIndex-start_Index];
-				    propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
-				    //printf("Enters Section (6) Inner Type 6, siteIndex: %ld, stress: %5.5e \n", siteIndex, stress);
-				  }
-			      }
-			      //-----------------------------------------------------
-			      //======================================================================
-			      
-			    }/*else{
-			       printf("Does not require refreshing of Wall Shear Stress Magnitude ... \n");
-			       }*/
-			  //----------------------------------------------------------------------
-			  
-			  // Free memory once the mem.copies are Completed
-			  if(res_Read_MacroVars){
-			    // Explicitly
-			    if (dens_GPU != nullptr) {
-			      delete[] dens_GPU;
-			      dens_GPU = nullptr;
-			    }
-			    if (vx_GPU != nullptr) {
-			      delete[] vx_GPU;
-			      vx_GPU = nullptr;
-			    }
-			    if (vy_GPU != nullptr) {
-			      delete[] vy_GPU;
-			      vy_GPU = nullptr;
-			    }
-			    if (vz_GPU != nullptr) {
-			      delete[] vz_GPU;
-			      vz_GPU = nullptr;
-			    }
-			    
-			    /*
-			    // Or switch to using the following
-			    if (dens_GPU || vx_GPU || vy_GPU || vz_GPU) {
-			      // Handle memory allocation failure; for example:
-			      for (auto& ptr : MacroVarsPointers) {
-				delete[] ptr;  // Safe because they are either nullptr or valid allocations
-				ptr = nullptr;  // Reset pointer after deletion to prevent dangling pointer
-			      }
-			    }
-			    */
-			    
-			  }
-			  
-			  // TODO
-			  // Free the memory associated with the wall shear stress magnitude..
-			  
-			  return res_Read_MacroVars;
+
+				// b. Velocity
+				if (vx_GPU == nullptr){
+					cudaStatus = cudaHostAlloc((void**)&vx_GPU, MemSz, cudaHostAllocDefault);
+					memset(vx_GPU, 0, MemSz);
+					if (cudaStatus != cudaSuccess) {
+								printf("Vx Memory allocation failure: %s\n", cudaGetErrorString(cudaStatus));
+								fflush(stdout);
+								res_Read_MacroVars = false;
+								return res_Read_MacroVars;
+						}
+				}
+				if (vy_GPU == nullptr){
+					cudaStatus = cudaHostAlloc((void**)&vy_GPU, MemSz, cudaHostAllocDefault);
+					memset(vy_GPU, 0, MemSz);
+					if (cudaStatus != cudaSuccess) {
+								printf("Vy Memory allocation failure: %s\n", cudaGetErrorString(cudaStatus));
+								fflush(stdout);
+								res_Read_MacroVars = false;
+								return res_Read_MacroVars;
+						}
+				}
+				if (vz_GPU == nullptr){
+					cudaStatus = cudaHostAlloc((void**)&vz_GPU, MemSz, cudaHostAllocDefault);
+					memset(vz_GPU, 0, MemSz);
+					if (cudaStatus != cudaSuccess) {
+								printf("Vz Memory allocation failure: %s\n", cudaGetErrorString(cudaStatus));
+								fflush(stdout);
+								res_Read_MacroVars = false;
+								return res_Read_MacroVars;
+						}
+				}
+
+				//--------------------------------------------------------------------------
+				// Proceed with the memory transfer operations
+				// a. Density
+				if (propertyCache.densityCache.RequiresRefresh()) {
+					cudaStatus = cudaMemcpyAsync(dens_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
+					if (cudaStatus != cudaSuccess) {
+						printf("GPU memory transfer for density failed: %s\n", cudaGetErrorString(cudaStatus));
+						fflush(stdout);
+						cudaFreeHost(dens_GPU);
+						dens_GPU = nullptr;
+						res_Read_MacroVars = false;
+					}
+				}
+				//--------------------------------------------------------------------------
+				// b. Velocity
+				if (propertyCache.velocityCache.RequiresRefresh()) {
+
+						if (vx_GPU && vy_GPU && vz_GPU) {
+								cudaStatus = cudaMemcpyAsync(vx_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[1ULL * nFluid_nodes + firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
+								if (cudaStatus != cudaSuccess) {
+										printf("GPU memory transfer Vel(1) failed: %s\n", cudaGetErrorString(cudaStatus));
+										fflush(stdout);
+										cudaFreeHost(vx_GPU);
+										vx_GPU = nullptr;
+										res_Read_MacroVars = false;
+								}
+
+								cudaStatus = cudaMemcpyAsync(vy_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[2ULL * nFluid_nodes + firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
+								if (cudaStatus != cudaSuccess) {
+										printf("GPU memory transfer Vel(2) failed: %s\n", cudaGetErrorString(cudaStatus));
+										fflush(stdout);
+										cudaFreeHost(vy_GPU);
+										vy_GPU = nullptr;
+										res_Read_MacroVars = false;
+								}
+
+								cudaStatus = cudaMemcpyAsync(vz_GPU, &(((distribn_t*)GPUDataAddr_dbl_MacroVars)[3ULL * nFluid_nodes + firstIndex]), MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
+								if (cudaStatus != cudaSuccess) {
+										printf("GPU memory transfer Vel(3) failed: %s\n", cudaGetErrorString(cudaStatus));
+										fflush(stdout);
+										cudaFreeHost(vz_GPU);
+										vz_GPU = nullptr;
+										res_Read_MacroVars = false;
+								}
+						}
+				}
+
+				// Synchronize the stream to ensure all memcpy operations are completed
+				cudaStreamSynchronize(stream_Read_Data_GPU_Dens);
+
+				if (propertyCache.densityCache.RequiresRefresh() || propertyCache.velocityCache.RequiresRefresh()) {
+						for (site_t siteIndex = firstIndex; siteIndex < (firstIndex + siteCount); siteIndex++) {
+								geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
+
+								// Need to make it more general - Pass the Collision Kernel Impl. typename - To do!!!
+								kernels::HydroVars<LB_KERNEL> hydroVars(site);
+
+								// Pass the density and velocity to the hydroVars and the densityCache, velocityCache
+								if (propertyCache.densityCache.RequiresRefresh()) {
+										hydroVars.density = dens_GPU[siteIndex - firstIndex];
+										propertyCache.densityCache.Put(siteIndex, hydroVars.density);
+								}
+
+								if (propertyCache.velocityCache.RequiresRefresh()) {
+										hydroVars.velocity.x = vx_GPU[siteIndex - firstIndex];
+										hydroVars.velocity.y = vy_GPU[siteIndex - firstIndex];
+										hydroVars.velocity.z = vz_GPU[siteIndex - firstIndex];
+										propertyCache.velocityCache.Put(siteIndex, hydroVars.velocity);
+								}
+						}
+				}
+
+				// Wall Shear Stress Magnitude Case - Fill First the non-adjacent to walls sites
+				if (propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) {
+					for (site_t siteIndex = firstIndex; siteIndex < (firstIndex + siteCount); siteIndex++) {
+						geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
+						//
+						if (!site.IsWall()) {
+								distribn_t stress = NO_VALUE; // constants.h: const distribn_t NO_VALUE = std::numeric_limits<distribn_t>::max();
+								propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
+						}
+						//
+					}
+				}
+
+
+				// Wall Shear Stress Magnitude Case - Fill the adjacent to walls sites
+				if (propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()) {
+						distribn_t stress;
+
+						auto copyWallShearStress = [&](distribn_t* stressArray, site_t start_Index, site_t total_numElements) {
+								for (site_t siteIndex = start_Index; siteIndex < (start_Index + total_numElements); siteIndex++) {
+										geometry::Site<geometry::LatticeData> site = mLatDat->GetSite(siteIndex);
+										stress = stressArray[siteIndex - start_Index];
+										propertyCache.wallShearStressMagnitudeCache.Put(site.GetIndex(), stress);
+								}
+						};
+
+						// Domain Edge
+						site_t start_Index_Edge_Type2 = mLatDat->GetMidDomainSiteCount() + mLatDat->GetDomainEdgeCollisionCount(0);
+						site_t total_numElements_Edge_Type2 = mLatDat->GetDomainEdgeCollisionCount(1);
+						site_t start_Index_Edge_Type5 = mLatDat->GetMidDomainSiteCount() + mLatDat->GetDomainEdgeCollisionCount(0) + mLatDat->GetDomainEdgeCollisionCount(1)
+																						+ mLatDat->GetDomainEdgeCollisionCount(2) + mLatDat->GetDomainEdgeCollisionCount(3);
+						site_t total_numElements_Edge_Type5 = mLatDat->GetDomainEdgeCollisionCount(4);
+						site_t start_Index_Edge_Type6 = mLatDat->GetMidDomainSiteCount() + mLatDat->GetDomainEdgeCollisionCount(0) + mLatDat->GetDomainEdgeCollisionCount(1)
+																						+ mLatDat->GetDomainEdgeCollisionCount(2) + mLatDat->GetDomainEdgeCollisionCount(3) + mLatDat->GetDomainEdgeCollisionCount(4);
+						site_t total_numElements_Edge_Type6 = mLatDat->GetDomainEdgeCollisionCount(5);
+
+						// Inner Domain
+						site_t start_Index_Inner_Type2 = mLatDat->GetMidDomainCollisionCount(0);
+						site_t total_numElements_Inner_Type2 = mLatDat->GetMidDomainCollisionCount(1);
+						site_t start_Index_Inner_Type5 = mLatDat->GetMidDomainCollisionCount(0) + mLatDat->GetMidDomainCollisionCount(1) + mLatDat->GetMidDomainCollisionCount(2) + mLatDat->GetMidDomainCollisionCount(3);
+						site_t total_numElements_Inner_Type5 = mLatDat->GetMidDomainCollisionCount(4);
+						site_t start_Index_Inner_Type6 = mLatDat->GetMidDomainCollisionCount(0) + mLatDat->GetMidDomainCollisionCount(1) + mLatDat->GetMidDomainCollisionCount(2)
+																						 + mLatDat->GetMidDomainCollisionCount(3) + mLatDat->GetMidDomainCollisionCount(4);
+						site_t total_numElements_Inner_Type6 = mLatDat->GetMidDomainCollisionCount(5);
+
+						static distribn_t *WallShearStressMagn_Edge_Type2_GPU = nullptr, *WallShearStressMagn_Edge_Type5_GPU = nullptr, *WallShearStressMagn_Edge_Type6_GPU = nullptr;
+						static distribn_t *WallShearStressMagn_Inner_Type2_GPU = nullptr, *WallShearStressMagn_Inner_Type5_GPU = nullptr, *WallShearStressMagn_Inner_Type6_GPU = nullptr;
+
+						auto allocateAndCopy = [&](distribn_t*& stressArray, void* GPUDataAddr, site_t total_numElements) {
+								if (total_numElements != 0) {
+
+									// Allocate only the first time
+									if (stressArray == nullptr) {
+										cudaStatus = cudaHostAlloc((void**)&stressArray, total_numElements * sizeof(distribn_t), cudaHostAllocDefault);
+										memset(stressArray, 0, total_numElements * sizeof(distribn_t));
+										if (stressArray == nullptr) {
+												printf("Wall Shear Stress magnitude allocation failure");
+												fflush(stdout);
+												res_Read_MacroVars = false;
+										}
+									}
+									MemSz = total_numElements * sizeof(distribn_t);
+									cudaStatus = cudaMemcpyAsync(stressArray, GPUDataAddr, MemSz, cudaMemcpyDeviceToHost, stream_Read_Data_GPU_Dens);
+									if (cudaStatus != cudaSuccess) {
+										printf("GPU memory transfer for Wall Shear Stress magnitude failed: %s\n", cudaGetErrorString(cudaStatus));
+										fflush(stdout);
+										cudaFreeHost(stressArray);
+										stressArray = nullptr;
+										res_Read_MacroVars = false;
+									}
+								}
+							};
+
+						// Domain Edge
+						allocateAndCopy(WallShearStressMagn_Edge_Type2_GPU, GPUDataAddr_WallShearStressMagn_Edge_Type2, total_numElements_Edge_Type2);
+						allocateAndCopy(WallShearStressMagn_Edge_Type5_GPU, GPUDataAddr_WallShearStressMagn_Edge_Type5, total_numElements_Edge_Type5);
+						allocateAndCopy(WallShearStressMagn_Edge_Type6_GPU, GPUDataAddr_WallShearStressMagn_Edge_Type6, total_numElements_Edge_Type6);
+
+						// Inner Domain
+						allocateAndCopy(WallShearStressMagn_Inner_Type2_GPU, GPUDataAddr_WallShearStressMagn_Inner_Type2, total_numElements_Inner_Type2);
+						allocateAndCopy(WallShearStressMagn_Inner_Type5_GPU, GPUDataAddr_WallShearStressMagn_Inner_Type5, total_numElements_Inner_Type5);
+						allocateAndCopy(WallShearStressMagn_Inner_Type6_GPU, GPUDataAddr_WallShearStressMagn_Inner_Type6, total_numElements_Inner_Type6);
+
+						cudaStreamSynchronize(stream_Read_Data_GPU_Dens);
+
+						if (WallShearStressMagn_Edge_Type2_GPU) copyWallShearStress(WallShearStressMagn_Edge_Type2_GPU, start_Index_Edge_Type2, total_numElements_Edge_Type2);
+						if (WallShearStressMagn_Edge_Type5_GPU) copyWallShearStress(WallShearStressMagn_Edge_Type5_GPU, start_Index_Edge_Type5, total_numElements_Edge_Type5);
+						if (WallShearStressMagn_Edge_Type6_GPU) copyWallShearStress(WallShearStressMagn_Edge_Type6_GPU, start_Index_Edge_Type6, total_numElements_Edge_Type6);
+
+						if (WallShearStressMagn_Inner_Type2_GPU) copyWallShearStress(WallShearStressMagn_Inner_Type2_GPU, start_Index_Inner_Type2, total_numElements_Inner_Type2);
+						if (WallShearStressMagn_Inner_Type5_GPU) copyWallShearStress(WallShearStressMagn_Inner_Type5_GPU, start_Index_Inner_Type5, total_numElements_Inner_Type5);
+						if (WallShearStressMagn_Inner_Type6_GPU) copyWallShearStress(WallShearStressMagn_Inner_Type6_GPU, start_Index_Inner_Type6, total_numElements_Inner_Type6);
+
+						// Clean up wall shear stress magnitude arrays
+						//if (WallShearStressMagn_Edge_Type2_GPU) cudaFreeHost(WallShearStressMagn_Edge_Type2_GPU);
+						//if (WallShearStressMagn_Edge_Type5_GPU) cudaFreeHost(WallShearStressMagn_Edge_Type5_GPU);
+						//if (WallShearStressMagn_Edge_Type6_GPU) cudaFreeHost(WallShearStressMagn_Edge_Type6_GPU);
+						//if (WallShearStressMagn_Inner_Type2_GPU) cudaFreeHost(WallShearStressMagn_Inner_Type2_GPU);
+						//if (WallShearStressMagn_Inner_Type5_GPU) cudaFreeHost(WallShearStressMagn_Inner_Type5_GPU);
+						//if (WallShearStressMagn_Inner_Type6_GPU) cudaFreeHost(WallShearStressMagn_Inner_Type6_GPU);
+				}
+
+				// Clean up density and velocity arrays
+				//if (dens_GPU) cudaFreeHost(dens_GPU);
+				//if (vx_GPU) cudaFreeHost(vx_GPU);
+				//if (vy_GPU) cudaFreeHost(vy_GPU);
+				//if (vz_GPU) cudaFreeHost(vz_GPU);
+
+				return res_Read_MacroVars;
 			}
-	  
-	  
+
+
 			//=================================================================================================
 				/** Check the following!!! TODO!!!
 				Function for reading:
@@ -8611,7 +8398,7 @@ template<class LatticeType>
 				//if (mState->GetTimeStep() % frequency_WriteGlobalMem == 0)
 				lb::MacroscopicPropertyCache& propertyCache = GetPropertyCache();
 				bool requires_MacroVars = (propertyCache.densityCache.RequiresRefresh() ||
-						propertyCache.velocityCache.RequiresRefresh() || 
+						propertyCache.velocityCache.RequiresRefresh() ||
 						propertyCache.wallShearStressMagnitudeCache.RequiresRefresh()
 						) ? 1 : 0;
 				/*printf("Rank = %d, Time = %ld, requires_MacroVars = %d, dens = %d, vel = %d, shear = %d \n", myPiD, mState->GetTimeStep(), requires_MacroVars,

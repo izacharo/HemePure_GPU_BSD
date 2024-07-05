@@ -1,0 +1,3 @@
+repository='external project URL'
+module='http://sourceforge.net/projects/boost/files/boost/1.65.1/boost_1_65_1.tar.gz'
+tag=''

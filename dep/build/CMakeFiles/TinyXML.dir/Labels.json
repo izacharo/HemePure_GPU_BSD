@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/CMakeFiles/TinyXML"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/CMakeFiles/TinyXML.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/CMakeFiles/TinyXML-complete.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/TinyXML-prefix/src/TinyXML-stamp/TinyXML-build.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/TinyXML-prefix/src/TinyXML-stamp/TinyXML-configure.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/TinyXML-prefix/src/TinyXML-stamp/TinyXML-download.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/TinyXML-prefix/src/TinyXML-stamp/TinyXML-install.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/TinyXML-prefix/src/TinyXML-stamp/TinyXML-mkdir.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/TinyXML-prefix/src/TinyXML-stamp/TinyXML-patch.rule"
+		},
+		{
+			"file" : "/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/build/TinyXML-prefix/src/TinyXML-stamp/TinyXML-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"TinyXML"
+		],
+		"name" : "TinyXML"
+	}
+}

@@ -1827,8 +1827,8 @@ __global__ void GPU_WallMom_correction_File_prefactor_NoIoletIDSearch(
 			// Add here an if wallShearStressMagn_Eval as well
 			// Evaluate the wall shear stress magnitude if this is a wall site
 			// The first approach should be faster (Is it ?)
-			if (((site_t)Ind - upper_limit_Wall +1) * ((site_t)Ind - lower_limit_Wall) <= 0){		// When the upper_limit is NOT included
-			//if( (Ind >= lower_limit_Wall) && (Ind < upper_limit_Wall) ){
+			//if (((site_t)Ind - upper_limit_Wall +1) * ((site_t)Ind - lower_limit_Wall) <= 0){		// When the upper_limit is NOT included
+			if( (Ind >= lower_limit_Wall) && (Ind < upper_limit_Wall) ){
 					distribn_t stress;
 
 					/*printf("Site: % ld, MidFluid limits: [%ld, %ld), Wall limits: [%ld, %ld) \n", Ind,
