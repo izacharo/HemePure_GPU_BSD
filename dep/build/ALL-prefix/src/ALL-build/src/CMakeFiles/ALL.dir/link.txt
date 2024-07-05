@@ -1,2 +1,0 @@
-/usr/bin/ar qc libALL.a CMakeFiles/ALL.dir/ALL.cpp.o CMakeFiles/ALL.dir/ALL_fortran.cpp.o
-/usr/bin/ranlib libALL.a

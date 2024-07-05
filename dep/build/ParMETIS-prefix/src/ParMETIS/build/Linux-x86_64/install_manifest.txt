@@ -1,6 +1,0 @@
-/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/install/include/parmetis.h
-/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/install/lib/libparmetis.a
-/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/install/bin/ptest
-/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/install/bin/mtest
-/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/install/bin/parmetis
-/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/install/bin/pometis

@@ -1,1 +1,0 @@
-cmd='cmake;<SOURCE_DIR>;-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>;-DCMAKE_C_COMPILER=/opt/openmpi-3.0.0/bin/mpicc;-DCMAKE_CXX_COMPILER=/opt/openmpi-3.0.0/bin/mpicxx'

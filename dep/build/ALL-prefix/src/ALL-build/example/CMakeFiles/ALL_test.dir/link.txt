@@ -1,1 +1,0 @@
-/opt/openmpi-3.0.0/bin/mpicxx -rdynamic CMakeFiles/ALL_test.dir/ALL_test.cpp.o -o ALL_test  ../src/libALL.a 

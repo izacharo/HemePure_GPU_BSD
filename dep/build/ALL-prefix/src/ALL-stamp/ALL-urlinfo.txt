@@ -1,3 +1,0 @@
-repository='external project URL'
-module='/home/ioannis/Documents/UCL_project/code_development/GPU_code/github_GPU_Hemepure_GPU_BSD/HemePure_GPU_BSD/dep/src/ALL_current.tar.gz'
-tag=''

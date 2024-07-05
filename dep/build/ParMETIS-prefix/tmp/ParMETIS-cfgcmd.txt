@@ -1,1 +1,0 @@
-cmd='make;config;prefix=<INSTALL_DIR>;cc=/opt/openmpi-3.0.0/bin/mpicc;cxx=/opt/openmpi-3.0.0/bin/mpicxx;&&;cd;metis;&&;make;config;prefix=<INSTALL_DIR>;cc=/opt/openmpi-3.0.0/bin/mpicc;cxx=/opt/openmpi-3.0.0/bin/mpicxx'

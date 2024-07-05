@@ -1,1 +1,0 @@
-/opt/openmpi-3.0.0/bin/mpicxx -rdynamic CMakeFiles/ASCII2MPIBIN.dir/ascii2mpibin.cpp.o -o ASCII2MPIBIN  ../src/libALL.a 
