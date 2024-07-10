@@ -158,7 +158,7 @@ if(HEMELB_USE_GPU)
 	set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_80")
 	if(${CMAKE_CXX_COMPILER_ID} STREQUAL GNU)
 	  message("gnu COMPILER")
-	    #set(CMAKE_CUDA_FLAGS "-ccbin g++ -gencode arch=compute_75,code=sm_75 -lineinfo --ptxas-options=-v --disable-warnings -maxrregcount 200")
+	   #set(CMAKE_CUDA_FLAGS "-ccbin g++ -gencode arch=compute_75,code=sm_75 -lineinfo --ptxas-options=-v --disable-warnings -maxrregcount 200")
 	    set(CMAKE_CUDA_FLAGS "-ccbin g++ -gencode arch=compute_80,code=sm_80 -lineinfo --ptxas-options=-v --disable-warnings -maxrregcount 200")
 	    set(CMAKE_CUDA_FLAGS_DEBUG " -ccbin g++ --compiler-options '-g' '-G' -gencode arch=compute_35,code=sm_35 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_75,code=sm_75 -lineinfo --ptxas-options=-v --disable-warnings")
 	    #set(CMAKE_CUDA_FLAGS_DEBUG " -ccbin g++ --compiler-options '-msse3' -gencode arch=compute_35,code=sm_35 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_75,code=sm_75 -lineinfo --disable-warnings")
@@ -326,8 +326,8 @@ add_subdirectory(resources)
 set_property(TARGET ${HEMELB_EXECUTABLE}
 	     PROPERTY CUDA_SEPARABLE_COMPILATION ON)
 
-set_property(TARGET ${HEMELB_EXECUTABLE}
-	     PROPERTY CUDA_STANDARD 11)
+#set_property(TARGET ${HEMELB_EXECUTABLE}
+#		     PROPERTY CUDA_STANDARD 11)
 
 target_link_libraries(
 	${HEMELB_EXECUTABLE}

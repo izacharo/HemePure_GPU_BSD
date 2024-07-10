@@ -635,20 +635,51 @@ namespace hemelb
 		double density_1 = 1.0 / nn;
 		double momentumMagnitudeSquared = momentum_x * momentum_x
 													+ momentum_y * momentum_y + momentum_z * momentum_z;
-		double f_neq[19];
-	#pragma unroll 19
-		for (int i = 0; i < _NUMVECTORS; ++i)
-		{
-			double mom_dot_ei = (double)_CX_19[i] * momentum_x
-									+ (double)_CY_19[i] * momentum_y
-									+ (double)_CZ_19[i] * momentum_z;
 
-			double dev_fEq = _EQMWEIGHTS_19[i]
-													* (nn - (3.0 / 2.0) * ( momentum_x * momentum_x + momentum_y * momentum_y + momentum_z * momentum_z ) * density_1
+		double f_neq[19];
+		if(write_GlobalMem){
+#pragma unroll 19
+			for (int i = 0; i < _NUMVECTORS; ++i)
+			{
+				double mom_dot_ei = (double)_CX_19[i] * momentum_x
+												+ (double)_CY_19[i] * momentum_y
+												+ (double)_CZ_19[i] * momentum_z;
+
+				/*
+						dev_fEq[i] = _EQMWEIGHTS_19[i]
+										* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+														+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+			 */
+
+			  double dev_fEq = _EQMWEIGHTS_19[i]
+										* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+														+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+
+				f_neq[i] = dev_ff[i] - dev_fEq;
+				dev_ff[i] += f_neq[i] * dev_minusInvTau;
+			}
+		}
+		else{
+			#pragma unroll 19
+			for (int i = 0; i < _NUMVECTORS; ++i)
+			{
+				double mom_dot_ei = (double)_CX_19[i] * momentum_x
+					+ (double)_CY_19[i] * momentum_y
+					+ (double)_CZ_19[i] * momentum_z;
+
+				/*
+					dev_fEq[i] = _EQMWEIGHTS_19[i]
+						* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+						+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+				*/
+
+				double dev_fEq = _EQMWEIGHTS_19[i]
+													* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
 																	+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
 
-			f_neq[i] = dev_ff[i] - dev_fEq;
-			dev_ff[i] += (dev_ff[i] - dev_fEq) * dev_minusInvTau;
+				//f_neq[i] = dev_ff[i] - dev_fEq;
+				dev_ff[i] += (dev_ff[i] - dev_fEq) * dev_minusInvTau;
+			}
 		}
 		//-----------------------------------------------------------------------------------------------------------
 
@@ -1221,19 +1252,49 @@ namespace hemelb
 													+ momentum_y * momentum_y + momentum_z * momentum_z;
 
 		double f_neq[19];
-	#pragma unroll 19
-		for (int i = 0; i < _NUMVECTORS; ++i)
-		{
-			double mom_dot_ei = (double)_CX_19[i] * momentum_x
-									+ (double)_CY_19[i] * momentum_y
-									+ (double)_CZ_19[i] * momentum_z;
+		if(write_GlobalMem){
+#pragma unroll 19
+			for (int i = 0; i < _NUMVECTORS; ++i)
+			{
+				double mom_dot_ei = (double)_CX_19[i] * momentum_x
+												+ (double)_CY_19[i] * momentum_y
+												+ (double)_CZ_19[i] * momentum_z;
 
-			double dev_fEq = _EQMWEIGHTS_19[i]
-													* (nn - (3.0 / 2.0) * ( momentum_x * momentum_x + momentum_y * momentum_y + momentum_z * momentum_z ) * density_1
+				/*
+						dev_fEq[i] = _EQMWEIGHTS_19[i]
+										* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+														+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+			 */
+
+			  double dev_fEq = _EQMWEIGHTS_19[i]
+										* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+														+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+
+				f_neq[i] = dev_ff[i] - dev_fEq;
+				dev_ff[i] += f_neq[i] * dev_minusInvTau;
+			}
+		}
+		else{
+			#pragma unroll 19
+			for (int i = 0; i < _NUMVECTORS; ++i)
+			{
+				double mom_dot_ei = (double)_CX_19[i] * momentum_x
+					+ (double)_CY_19[i] * momentum_y
+					+ (double)_CZ_19[i] * momentum_z;
+
+				/*
+					dev_fEq[i] = _EQMWEIGHTS_19[i]
+						* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+						+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+				*/
+
+				double dev_fEq = _EQMWEIGHTS_19[i]
+													* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
 																	+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
 
-			f_neq[i] = dev_ff[i] - dev_fEq;
-			dev_ff[i] += (dev_ff[i] - dev_fEq) * dev_minusInvTau;
+				//f_neq[i] = dev_ff[i] - dev_fEq;
+				dev_ff[i] += (dev_ff[i] - dev_fEq) * dev_minusInvTau;
+			}
 		}
 		//-----------------------------------------------------------------------------------------------------------
 
@@ -1762,13 +1823,10 @@ namespace hemelb
 			//printf("Momentum: _x = %.5e, _y = %.5e, _z = %.5e \n\n", momentum_x, momentum_y, momentum_z);
 		}
 
-
 		// In the case of body force
 		//momentum_x += 0.5 * _force_x;
 		//momentum_y += 0.5 * _force_y;
 		//momentum_z += 0.5 * _force_z;
-
-		double density_1 = 1.0 / nn;
 
 		// Compute velocity components
 		velx = momentum_x/nn;
@@ -1777,29 +1835,54 @@ namespace hemelb
 
 		//-----------------------------------------------------------------------------------------------------------
 		// c. Calculate equilibrium distr. functions
-
-		//double momentumMagnitudeSquared = momentum_x * momentum_x
-		//											+ momentum_y * momentum_y + momentum_z * momentum_z;
+		double density_1 = 1.0 / nn;
+		double momentumMagnitudeSquared = momentum_x * momentum_x
+													+ momentum_y * momentum_y + momentum_z * momentum_z;
 
 		double f_neq[19];
+		if(write_GlobalMem){
 #pragma unroll 19
-		for (int i = 0; i < _NUMVECTORS; ++i)
-		{
-			double mom_dot_ei = (double)_CX_19[i] * momentum_x
-									+ (double)_CY_19[i] * momentum_y
-									+ (double)_CZ_19[i] * momentum_z;
+			for (int i = 0; i < _NUMVECTORS; ++i)
+			{
+				double mom_dot_ei = (double)_CX_19[i] * momentum_x
+												+ (double)_CY_19[i] * momentum_y
+												+ (double)_CZ_19[i] * momentum_z;
 
-			/*
-			dev_fEq[i] = _EQMWEIGHTS_19[i]
-							* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
-											+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
-			*/
-			double dev_fEq = _EQMWEIGHTS_19[i]
-							* (nn - (3.0 / 2.0) * ( momentum_x * momentum_x + momentum_y * momentum_y + momentum_z * momentum_z ) * density_1
-											+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+				/*
+						dev_fEq[i] = _EQMWEIGHTS_19[i]
+										* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+														+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+			 */
 
-			f_neq[i] = dev_ff[i] - dev_fEq;
-			dev_ff[i] += (dev_ff[i] - dev_fEq) * dev_minusInvTau;
+			  double dev_fEq = _EQMWEIGHTS_19[i]
+										* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+														+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+
+				f_neq[i] = dev_ff[i] - dev_fEq;
+				dev_ff[i] += f_neq[i] * dev_minusInvTau;
+			}
+		}
+		else{
+			#pragma unroll 19
+			for (int i = 0; i < _NUMVECTORS; ++i)
+			{
+				double mom_dot_ei = (double)_CX_19[i] * momentum_x
+					+ (double)_CY_19[i] * momentum_y
+					+ (double)_CZ_19[i] * momentum_z;
+
+				/*
+					dev_fEq[i] = _EQMWEIGHTS_19[i]
+						* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+						+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+				*/
+
+				double dev_fEq = _EQMWEIGHTS_19[i]
+													* (nn - (3.0 / 2.0) * momentumMagnitudeSquared * density_1
+																	+ (9.0 / 2.0) * density_1 * mom_dot_ei * mom_dot_ei + 3.0 * mom_dot_ei);
+
+				//f_neq[i] = dev_ff[i] - dev_fEq;
+				dev_ff[i] += (dev_ff[i] - dev_fEq) * dev_minusInvTau;
+			}
 		}
 
 		// d. Body Force case: Add details of any forcing scheme here - Evaluate force[i]
