@@ -40,6 +40,14 @@ namespace hemelb
 	namespace lb
 	{
 
+		// Define static variables associated with pinned memory
+		template<class LatticeType>
+			distribn_t* LBM<LatticeType>::h_ghostDensity_inlet = nullptr;
+
+		template<class LatticeType>
+			distribn_t* LBM<LatticeType>::h_ghostDensity_outlet = nullptr;
+
+
 		template<class LatticeType>
 			hemelb::lb::LbmParameters* LBM<LatticeType>::GetLbmParams()
 			{
@@ -1641,22 +1649,20 @@ namespace hemelb
 			}
 
 
-
 		template<class LatticeType>
-			void LBM<LatticeType>::get_Iolet_BCs(std::string hemeLB_IoletBC_Inlet, std::string hemeLB_IoletBC_Outlet)
-			{
+			void LBM<LatticeType>::get_Iolet_BCs(std::string& hemeLB_IoletBC_Inlet, std::string& hemeLB_IoletBC_Outlet) {
 				// Check If I can get the type of Iolet BCs from the CMake file
 				#define QUOTE_RAW(x) #x
 				#define QUOTE_CONTENTS(x) QUOTE_RAW(x)
 
-				//std::string hemeIoletBC_Inlet, hemeIoletBC_Outlet;
 				hemeLB_IoletBC_Inlet = QUOTE_CONTENTS(HEMELB_INLET_BOUNDARY);
-				//printf("Function Call: Inlet Type of BCs: hemeIoletBC_Inlet: %s \n", hemeLB_IoletBC_Inlet.c_str()); //note the use of c_str
+				// std::cout instead of printf for more idiomatic C++
+				//std::cout << "Function get_Iolet_BCs Call: Inlet Type of BCs: hemeIoletBC_Inlet: " << hemeLB_IoletBC_Inlet << std::endl;
 
 				hemeLB_IoletBC_Outlet = QUOTE_CONTENTS(HEMELB_OUTLET_BOUNDARY);
-				//printf("Function Call: Outlet Type of BCs: hemeIoletBC_Outlet: %s \n\n", hemeLB_IoletBC_Outlet.c_str()); //note the use of c_str
-
+				//std::cout << "Function get_Iolet_BCs Call: Outlet Type of BCs: hemeIoletBC_Outlet: " << hemeLB_IoletBC_Outlet << std::endl;
 			}
+
 
 //=================================================================================================
 /**		Function for applying Velocity Boundary conditions
@@ -2873,6 +2879,13 @@ namespace hemelb
 			{
 				cudaError_t cudaStatus;
 
+				cudaDeviceSynchronize();
+
+				// Local rank
+				const hemelb::net::Net& rank_Com = *mNet;	// Needs the constructor and be initialised
+				int myPiD = rank_Com.Rank();
+				//
+
 				bool finalise_GPU_res = true;
 
 				std::string hemeIoletBC_Inlet, hemeIoletBC_Outlet;
@@ -2911,22 +2924,9 @@ namespace hemelb
 				//cudaStreamDestroy(stream_memCpy_GPU_CPU_domainEdge);
 
 
-
 				// Free GPU memory
-				/*
-				cudaStatus = cudaFree(GPUDataAddr_dbl_fOld);
-				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree failed\n"); return false; }
-
-				cudaStatus = cudaFree(GPUDataAddr_dbl_fNew);
-				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree failed\n"); return false; }
-				*/
-
 				cudaStatus = cudaFree(GPUDataAddr_dbl_MacroVars);
 				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree failed\n"); finalise_GPU_res=false; }
-
-				/*cudaStatus = cudaFree(GPUDataAddr_int64_Neigh);
-				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree failed\n"); return false; }
-				*/
 
 				cudaStatus = cudaFree(GPUDataAddr_uint32_Wall);
 				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree failed\n"); finalise_GPU_res=false; }
@@ -2990,89 +2990,79 @@ namespace hemelb
 				void *GPUDataAddr_wallMom_prefactor_correction_OutletWall_Inner;
 				*/
 
-				/* // Fail to free the following - check using cudaPointerGetAttributes
-				if(GPUDataAddr_wallMom_prefactor_correction_Inlet_Edge){
-					cudaStatus = cudaFree(GPUDataAddr_wallMom_prefactor_correction_Inlet_Edge);
-					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree prefactor wall momentum correction (1) failed\n"); finalise_GPU_res=false; }
-				}
-				if(GPUDataAddr_wallMom_prefactor_correction_InletWall_Edge){
-					cudaStatus = cudaFree(GPUDataAddr_wallMom_prefactor_correction_InletWall_Edge);
-					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree prefactor wall momentum correction (2) failed\n"); finalise_GPU_res=false; }
-				}
-				if(GPUDataAddr_wallMom_prefactor_correction_Inlet_Inner){
-					cudaStatus = cudaFree(GPUDataAddr_wallMom_prefactor_correction_Inlet_Inner);
-					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree prefactor wall momentum correction (3) failed\n"); finalise_GPU_res=false; }
-				}
-				if(GPUDataAddr_wallMom_prefactor_correction_InletWall_Inner){
-					cudaStatus = cudaFree(GPUDataAddr_wallMom_prefactor_correction_InletWall_Inner);
-					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree prefactor wall momentum correction (4) failed\n"); finalise_GPU_res=false; }
-				}
-
-				*/
 				//----------------------------------------------------------------------
 				if (hemeIoletBC_Inlet == "NASHZEROTHORDERPRESSUREIOLET"){
 					cudaStatus = cudaFree(d_ghostDensity);
 					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree ghost Density inlet failed\n"); finalise_GPU_res=false; }
 				}
 
+
 				if (hemeIoletBC_Inlet == "LADDIOLET"){
-					if(mLatDat->GPUDataAddr_Inlet_velocityTable){
+					if(mLatDat->GPUDataAddr_Inlet_velocityTable != nullptr){
 						cudaStatus = cudaFree(mLatDat->GPUDataAddr_Inlet_velocityTable);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree Velocity Table failed\n"); finalise_GPU_res=false; }
 					}
 
-					if(GPUDataAddr_wallMom_correction_Inlet_Edge){
+
+					if(GPUDataAddr_wallMom_correction_Inlet_Edge!= nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_wallMom_correction_Inlet_Edge);
-						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree wall mom correction (1) inlet  failed\n"); finalise_GPU_res=false; }
+						if(cudaStatus != cudaSuccess){
+							fprintf(stderr, "cudaFree wall mom correction (1) inlet  failed - Rank: %d %s \n", myPiD, cudaGetErrorString(cudaStatus)); finalise_GPU_res=false;
+						}
+						else {
+							GPUDataAddr_wallMom_correction_Inlet_Edge = nullptr; // Avoid double free
+						}
 					}
 
-					if(GPUDataAddr_wallMom_correction_InletWall_Edge){
+
+					if(GPUDataAddr_wallMom_correction_InletWall_Edge != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_wallMom_correction_InletWall_Edge);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree wall mom correction (2) inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
-					if(GPUDataAddr_wallMom_correction_Inlet_Inner){
+					if(GPUDataAddr_wallMom_correction_Inlet_Inner != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_wallMom_correction_Inlet_Inner);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree wall mom correction (3) inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
-					if(GPUDataAddr_wallMom_correction_InletWall_Inner){
+					if(GPUDataAddr_wallMom_correction_InletWall_Inner != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_wallMom_correction_InletWall_Inner);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree wall mom correction (4) inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
 					// Only valid for the Vel Bcs Case: b. File
-					if(GPUDataAddr_pp_Inlet_weightsTable_coord){
+					if(GPUDataAddr_pp_Inlet_weightsTable_coord != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_pp_Inlet_weightsTable_coord);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree pointer to pointers Coordinates in weights_table - inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
-					if(GPUDataAddr_p_Inlet_weightsTable_wei){
+					if(GPUDataAddr_p_Inlet_weightsTable_wei != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_p_Inlet_weightsTable_wei);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree pointer to pointers weights in weights_table - inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
 					// Key value indices - Read these values from GPU Global mem instead of searching for the weight based on the key (xyz)
-					if(GPUDataAddr_index_weightTable_Inlet_Edge){
+					if(GPUDataAddr_index_weightTable_Inlet_Edge != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_index_weightTable_Inlet_Edge);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree map key value index in weights_table - inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
-					if(GPUDataAddr_index_weightTable_InletWall_Edge){
+					if(GPUDataAddr_index_weightTable_InletWall_Edge != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_index_weightTable_InletWall_Edge);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree map key value index in weights_table - inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
-					if(GPUDataAddr_index_weightTable_Inlet_Inner){
+					if(GPUDataAddr_index_weightTable_Inlet_Inner != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_index_weightTable_Inlet_Inner);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree map key value index in weights_table - inlet  failed\n"); finalise_GPU_res=false; }
 					}
-					if(GPUDataAddr_index_weightTable_InletWall_Inner){
+					if(GPUDataAddr_index_weightTable_InletWall_Inner != nullptr){
 						cudaStatus = cudaFree(GPUDataAddr_index_weightTable_InletWall_Inner);
 						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree map key value index in weights_table - inlet  failed\n"); finalise_GPU_res=false; }
 					}
 
 				} // Closes the if (hemeIoletBC_Inlet == "LADDIOLET")
+
 
 				// TOFO: Free the following:
 				/**
@@ -3131,14 +3121,18 @@ namespace hemelb
 				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFree failed\n"); finalise_GPU_res=false; }
 
 
-				/*
-				// Free up pinned Memory
-				cudaStatus = cudaFreeHost(Data_D2H_memcpy_totalSharedFs);
-				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFreeHost Data_D2H_memcpy_totalSharedFs failed ... \n"); finalise_GPU_res=false; }
+				// Free up pinned Memory associated with the Pressure BCs
+				if (h_ghostDensity_inlet != nullptr){
+					cudaStatus = cudaFreeHost(h_ghostDensity_inlet);
+					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFreeHost h_ghostDensity_inlet failed ... \n"); finalise_GPU_res=false; }
+					h_ghostDensity_inlet = nullptr;
+				}
 
-				cudaStatus = cudaFreeHost(Data_H2D_memcpy_totalSharedFs);
-				if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFreeHost Data_H2D_memcpy_totalSharedFs failed ... \n"); finalise_GPU_res=false; }
-				*/
+				if (h_ghostDensity_outlet != nullptr){
+					cudaStatus = cudaFreeHost(h_ghostDensity_outlet);
+					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaFreeHost h_ghostDensity_outlet failed ... \n"); finalise_GPU_res=false; }
+						h_ghostDensity_outlet = nullptr;
+				}
 
 
 				/**
@@ -6857,30 +6851,21 @@ template<class LatticeType>
 				mOutletValues->FinishReceive();
 
 				//**********************************************************************
-				/*// Get the type of Iolet BCs from the CMake file compiling options
+				// Get the type of Iolet BCs from the CMake file compiling options
 				std::string hemeIoletBC_Inlet, hemeIoletBC_Outlet;
 				get_Iolet_BCs(hemeIoletBC_Inlet, hemeIoletBC_Outlet);
-				*/
-				// Check If I can get the type of Iolet BCs from the CMake file
-				#define QUOTE_RAW(x) #x
-				#define QUOTE_CONTENTS(x) QUOTE_RAW(x)
-
-				std::string hemeIoletBC_Inlet, hemeIoletBC_Outlet;
-				hemeIoletBC_Inlet = QUOTE_CONTENTS(HEMELB_INLET_BOUNDARY);
-				//printf("Function Call: Inlet Type of BCs: hemeIoletBC_Inlet: %s \n", hemeLB_IoletBC_Inlet.c_str()); //note the use of c_str
-
-				hemeIoletBC_Outlet = QUOTE_CONTENTS(HEMELB_OUTLET_BOUNDARY);
-				//printf("Function Call: Outlet Type of BCs: hemeIoletBC_Outlet: %s \n\n", hemeLB_IoletBC_Outlet.c_str()); //note the use of c_str
+				//printf("Function Call: Inlet Type of BCs: %s \n", hemeIoletBC_Inlet_new.c_str()); //note the use of c_str
+				//std::cout << "Function Call: Inlet Type of BCs: " << hemeIoletBC_Inlet_new << " - Rank: " << myPiD << std::endl;
 
 				//----------------------------------------------------------------------
 				// Iolets - general details
 				//	Total GLOBAL iolets: n_Inlets = mInletValues->GetLocalIoletCount();
 				int n_Inlets = mInletValues->GetLocalIoletCount();
-				distribn_t* h_ghostDensity; // pointer to the ghost density for the inlets
+				//distribn_t* h_ghostDensity; // pointer to the ghost density for the inlets - Switch to pinned memory - Use h_ghostDensity_inlet instead
 
 				//	Total GLOBAL iolets: n_Outlets = mOutletValues->GetLocalIoletCount();
 				int n_Outlets = mOutletValues->GetLocalIoletCount();
-				distribn_t* h_ghostDensity_out;
+				//distribn_t* h_ghostDensity_out;
 				//----------------------------------------------------------------------
 
 				lb::MacroscopicPropertyCache& propertyCache = GetPropertyCache();
@@ -6972,31 +6957,36 @@ template<class LatticeType>
 
 				} // Ends the if(hemeIoletBC_Inlet == "LADDIOLET") loop
 				else if (hemeIoletBC_Inlet == "NASHZEROTHORDERPRESSUREIOLET"){
-
+					//--------------
 					// Approach 1: No pinned Memory
 					// Inlet BCs: NashZerothOrderPressure - Specify the ghost density for each inlet
 					//	Pass the ghost density[nInlets] to the GPU kernel (cudaMemcpy):
-					h_ghostDensity = new distribn_t[n_Inlets];
+					//h_ghostDensity = new distribn_t[n_Inlets];
+					//--------------
 
-					/*
-					// Approach 2: Switch to pinned memory Feb 2022
+					//--------------
+					// Approach 2: Switch to pinned memory July 2024
 					int n_bytes = n_Inlets * sizeof(distribn_t);
-					cudaStatus = cudaMallocHost((void**)&h_ghostDensity, n_bytes);
-					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaMallocHost for h_ghostDensity failed... Rank = %d, Time = %d \n",myPiD, mState->GetTimeStep()); }
-					memset(h_ghostDensity, 0, n_bytes); */
-					//
+
+					// Allocate memory only the first time
+					if (h_ghostDensity_inlet == nullptr){
+						cudaStatus = cudaMallocHost((void**)&h_ghostDensity_inlet, n_bytes);
+						memset(h_ghostDensity_inlet, 0, n_bytes);
+						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaMallocHost for h_ghostDensity_inlet failed... Rank = %d, Time = %d \n", myPiD, mState->GetTimeStep()); }
+					}
+					//--------------
 
 					// Proceed with the collision type if the number of fluid nodes involved is not ZERO - HtD memcopy
 					// This (n_Inlets) refers to the total number of inlets globally. NOT on local RANK - SHOULD REPLACE THIS with the local number of inlets
 					if (n_Inlets!=0){
 						for (int i=0; i<n_Inlets; i++){
-							h_ghostDensity[i] = mInletValues->GetBoundaryDensity(i);
-							//std::cout << "Cout: GhostDensity : " << h_ghostDensity[i] << std::endl;
+							h_ghostDensity_inlet[i] = mInletValues->GetBoundaryDensity(i);
+							//std::cout << "Cout: GhostDensity : " << h_ghostDensity_inlet[i] << std::endl;
 						}
 						if (myPiD!=0){ // MemCopy cudaMemcpyHostToDevice only if rank!=0
-							// Memory copy from host (h_ghostDensity) to Device (d_ghostDensity)
-							//cudaStatus = cudaMemcpy(d_ghostDensity, h_ghostDensity, n_Inlets * sizeof(distribn_t), cudaMemcpyHostToDevice);
-							cudaStatus = cudaMemcpyAsync(d_ghostDensity, h_ghostDensity, n_Inlets * sizeof(distribn_t), cudaMemcpyHostToDevice, stream_ghost_dens_inlet);
+							// Memory copy from host (h_ghostDensity_inlet) to Device (d_ghostDensity)
+							//cudaStatus = cudaMemcpy(d_ghostDensity, h_ghostDensity_inlet, n_Inlets * sizeof(distribn_t), cudaMemcpyHostToDevice);
+							cudaStatus = cudaMemcpyAsync(d_ghostDensity, h_ghostDensity_inlet, n_Inlets * sizeof(distribn_t), cudaMemcpyHostToDevice, stream_ghost_dens_inlet);
 							if(cudaStatus != cudaSuccess){ fprintf(stderr, "GPU memory transfer (ghostDensity) Host To Device failed\n"); //return false;
 							}
 						}
@@ -7048,28 +7038,34 @@ template<class LatticeType>
 					// Outlet BCs: NashZerothOrderPressure - Specify the ghost density for each outlet
 					//	Pass the ghost density_out[nInlets] to the GPU kernel (cudaMemcpy):
 
+					//--------------
 					// Approach 1: No pinned memory
-					h_ghostDensity_out = new distribn_t[n_Outlets];
+					// h_ghostDensity_outlet = new distribn_t[n_Outlets];
+					//--------------
 
-					/*
+					//--------------
 					// Approach 2: Use pinned memory
 					int n_bytes = n_Outlets * sizeof(distribn_t);
-					cudaStatus = cudaMallocHost((void**)&h_ghostDensity_out, n_bytes);
-					if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaMallocHost for h_ghostDensity_out failed\n"); }
-					memset(h_ghostDensity_out, 0, n_bytes);
-					// */
+
+					if (h_ghostDensity_outlet == nullptr){
+						cudaStatus = cudaMallocHost((void**)&h_ghostDensity_outlet, n_bytes);
+						memset(h_ghostDensity_outlet, 0, n_bytes);
+						if(cudaStatus != cudaSuccess){ fprintf(stderr, "cudaMallocHost for h_ghostDensity_outlet failed... Rank = %d, Time = %d \n", myPiD, mState->GetTimeStep()); }
+					}
+					//--------------
+
 
 					// Proceed with the collision type if the number of fluid nodes involved is not ZERO
 					if (n_Outlets!=0){ // even rank 0 can "see" this info
 
 						for (int i=0; i<n_Outlets; i++){
-							h_ghostDensity_out[i] = mOutletValues->GetBoundaryDensity(i);
+							h_ghostDensity_outlet[i] = mOutletValues->GetBoundaryDensity(i);
 							//std::cout << "Rank: " << myPiD <<  " Cout: GhostDensity Out: " << h_ghostDensity_out[i] << std::endl;
 						}
 						if (myPiD!=0){ // MemCopy cudaMemcpyHostToDevice only if rank!=0
 							// Memory copy from host (h_ghostDensity) to Device (d_ghostDensity)
 							//cudaStatus = cudaMemcpy(d_ghostDensity_out, h_ghostDensity_out, n_Outlets * sizeof(distribn_t), cudaMemcpyHostToDevice);
-							cudaStatus = cudaMemcpyAsync(d_ghostDensity_out, h_ghostDensity_out, n_Outlets * sizeof(distribn_t), cudaMemcpyHostToDevice, stream_ghost_dens_outlet);
+							cudaStatus = cudaMemcpyAsync(d_ghostDensity_out, h_ghostDensity_outlet, n_Outlets * sizeof(distribn_t), cudaMemcpyHostToDevice, stream_ghost_dens_outlet);
 							if(cudaStatus != cudaSuccess){ fprintf(stderr, "GPU memory transfer (ghostDensity_out) Host To Device failed\n"); //return false;
 							}
 						}
@@ -7415,20 +7411,6 @@ template<class LatticeType>
 				if(myPiD!=0) Read_DistrFunctions_GPU_to_CPU_totalSharedFs();
 				*/
 
-				//
-				// Approach 1: No pinned memory for ghost density (Pressure BCs)
-				// Delete the variables used for cudaMemcpy
-				if (hemeIoletBC_Outlet == "NASHZEROTHORDERPRESSUREIOLET") delete[] h_ghostDensity_out;
-				if (hemeIoletBC_Inlet == "NASHZEROTHORDERPRESSUREIOLET") delete[] h_ghostDensity;
-
-				/*
-				// Approach 2: Pinned memory for ghost density (Pressure BCs)
-				// Delete the variables used for cudaMemcpy
-				if (hemeIoletBC_Outlet == "NASHZEROTHORDERPRESSUREIOLET") cudaFreeHost(h_ghostDensity_out); //delete[] h_ghostDensity_out;
-				if (hemeIoletBC_Inlet == "NASHZEROTHORDERPRESSUREIOLET") cudaFreeHost(h_ghostDensity); //delete[] h_ghostDensity;
-				// */
-
-				//cudaProfilerStop();
 #else	// If computations on CPUs
 
 				// printf("Calling CPU PART \n\n");
